@@ -400,7 +400,7 @@ module execute(input clk, input reset,
 		
 		input	iready,
 		output	[RV-1:1]pc,
-		output	[RV-1:1]addr,
+		output	[RV-1:RV/16]addr,
 		output	[RV-1:0]wdata,
 		input			wdone,
 		output	[(RV/8)-1:0]wmask,
@@ -415,7 +415,7 @@ module execute(input clk, input reset,
 	assign rstrobe = {r_read_stall&(~cond[0]|r_wb[0]), r_read_stall&(~cond[0]|~r_wb[0])};
 	assign ifetch = r_fetch;
 	assign wdata = r_wdata;
-	assign addr = r_wb[RV-1:1];
+	assign addr = r_wb[RV-1:RV/16];
 	assign  wmask = r_wmask;
 	reg [(RV/8)-1:0]r_wmask;
 	reg [RV-1:0]r_wdata;
