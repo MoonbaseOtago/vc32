@@ -63,18 +63,29 @@ module tt_um_vc32_cpu #( parameter MAX_COUNT = 24'd10_000_000 ) (
 			end
 		end
 	1:	begin
-			r_out <= {waddr[7:1], 1'bx};
+			r_out <= (RV==16 ? {waddr[7:1], 1'bx} : {waddr[7:2], 2'bxx});
 			r_latch_hi <= 0;
 			r_latch_lo <= 1;
 			r_ind <= ~wmask[0];
 			r_state <= 2;
 		end
 	2:	begin
-			r_out <= wmask[0]?wdata[7:0]:wdata[15:8];
+			if (RV==16) begin
+				r_out <= wmask[0]?wdata[7:0]:wdata[15:8];
+			end else begin
+				if (wmask[0]) begin
+					r_out <= wdata[7:0];
+				end else 
+				case (wmask[3:1]) // synthesis full_case parallel_case
+				3'b??1: r_out <= wdata[15:8];
+				3'b?1?: r_out <= wdata[23:16];
+				3'b1??: r_out <= wdata[31:24];
+				endcase
+			end
 			r_latch_lo <= 0;
 			r_write <= 1;
-			r_state <= (wmask==2'b11 ?3:7);
-			r_wdone <= wmask!=2'b11;
+			r_state <= ((RV==16 ? wmask==2'b11 : wmask!=4'b1111) ?3:7);
+			r_wdone <= (RV==16 ? wmask!=2'b11 : wmask!=4'b1111);
 		end
 	3:	begin
 			r_out <= wdata[15:8];
@@ -85,7 +96,7 @@ module tt_um_vc32_cpu #( parameter MAX_COUNT = 24'd10_000_000 ) (
 		end
 	4:	begin
 			r_ind <= !rreq[0];
-			r_out <= {raddr[7:1], 1'bx};
+			r_out <= (RV==16 ? {raddr[7:1], 1'bx} : {raddr[7:2], 2'bxx});
 			r_latch_hi <= 0;
 			r_latch_lo <= 1;
 			r_state <= 5;
