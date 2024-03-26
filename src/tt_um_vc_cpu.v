@@ -11,10 +11,14 @@ module tt_um_vc32_cpu #( parameter MAX_COUNT = 24'd10_000_000 ) (
     input  wire       rst_n     // reset_n - low to reset
 );
 
-	parameter RV=32;
+	parameter RV=16;
+	parameter PV=18;
+	parameter MMU=1;
+	parameter NMMU=8;
+	
 
 	wire [RV-1:0]rdata, wdata;
-	wire [RV-1:RV/16]raddr, waddr;
+	wire [PV-1:RV/16]raddr, waddr;
 	wire rdone, wdone;
 	wire [1:0]rreq;
 	wire [(RV/8)-1:0]wmask;
@@ -43,7 +47,7 @@ module tt_um_vc32_cpu #( parameter MAX_COUNT = 24'd10_000_000 ) (
 	reg r_reset;
 	always @(posedge clk)
 		r_reset <= ~rst_n;
-	reg [2:0]r_state;
+	reg [3:0]r_state;
 	reg [7:0]r_out;
 	assign uo_out = r_out;
 	reg [15:0]r_in;
@@ -73,57 +77,69 @@ module tt_um_vc32_cpu #( parameter MAX_COUNT = 24'd10_000_000 ) (
 			r_rdone <= 0;
 			r_wdone <= 0;
 			if (|wmask) begin
-				r_out <= waddr[15:8];
+				r_out <= waddr[PV-1:16];
 				r_latch_hi <= 1;
 				r_state <= 1;
 			end else
 			if (|rreq) begin
-				r_out <= raddr[15:8];
+				r_out <= raddr[PV-1:16];
 				r_latch_hi <= 1;
-				r_state <= 4;
+				r_state <= 5;
 			end
 		end
 	1:	begin
+			r_out <= waddr[15:8];
+			r_latch_hi <= 1;
+			r_latch_lo <= 1;
+			r_state <= 2;
+		end
+	2:	begin
 			r_out <= (RV==16 ? {waddr[7:1], 1'bx} : {waddr[7:2], 2'bxx});
 			r_latch_hi <= 0;
 			r_latch_lo <= 1;
 			r_ind <= ~wmask[0];
-			r_state <= 2;
+			r_state <= 3;
 		end
-	2:	begin
+	3:	begin
 			r_out <= w_out;
 			r_latch_lo <= 0;
 			r_write <= 1;
-			r_state <= (wmask!=all_on ?3:7);
+			r_state <= (wmask!=all_on ?4:9);
 			r_wdone <= (wmask!=all_on);
 		end
-	3:	begin
+	4:	begin
 			r_out <= wdata[15:8];
 			r_ind <= 1;
 			r_write <= 1;
 			r_wdone <= 1;
-			r_state <= 7;
+			r_state <= 9;
 		end
-	4:	begin
+	5:	begin
+			r_out <= raddr[15:8];
+			r_latch_hi <= 1;
+			r_latch_lo <= 1;
+			r_state <= 6;
+		end
+	6:	begin
 			r_ind <= !rreq[0];
 			r_out <= (RV==16 ? {raddr[7:1], 1'bx} : {raddr[7:2], 2'bxx});
 			r_latch_hi <= 0;
 			r_latch_lo <= 1;
-			r_state <= 5;
+			r_state <= 7;
 		end
-	5:	begin
+	7:	begin
 			r_in[7:0] <= ui_in;
 			r_latch_lo <= 0;
 			r_ind <= 1;
 			r_rdone <= ~(&rreq);
-			r_state <= ~(&rreq)? 7:6;
+			r_state <= ~(&rreq)? 9:8;
 		end
-	6:	begin
+	8:	begin
 			r_in[15:8] <= ui_in;
 			r_rdone <= 1;
-			r_state <= 7;
+			r_state <= 9;
 		end
-	7:	begin
+	9:	begin
 			r_rdone <= 0;
 			r_wdone <= 0;
 			r_write <= 0;
@@ -132,7 +148,7 @@ module tt_um_vc32_cpu #( parameter MAX_COUNT = 24'd10_000_000 ) (
 	endcase
 
 
-	cpu   #(.RV(RV))cpu(.clk(clk), .reset_in(r_reset|!ena), 
+	cpu   #(.RV(RV), .PV(PV), .MMU(MMU), .NMMU(NMMU))cpu(.clk(clk), .reset_in(r_reset|!ena), 
 			.interrupt(interrupt),
 			.raddr(raddr),
 			.rdata(rdata),
