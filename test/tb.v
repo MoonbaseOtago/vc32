@@ -55,25 +55,29 @@ module tb ();
 	wire latch_lo = uio_out[3];
 	assign uio_in[7] = 0; // interrupt
 
-	reg [15:8]addrhi;
+	reg [17:16]addrhi;
+	reg [15:8]addrmed;
 	reg [7:1]addrlo;
 
-	assign ui_in = m[{addrhi, addrlo, ind}];
+	assign ui_in = m[{addrhi, addrhi, addrlo, ind}];
 
 	always @(negedge clk)
-	if (latch_hi) 
+	if (latch_hi&&!latch_lo) 
 		addrhi <= uo_out;
 	always @(negedge clk)
-	if (latch_lo) 
+	if (latch_lo&&!latch_hi) 
+		addrmed <= uo_out;
+	always @(negedge clk)
+	if (latch_lo&&!latch_hi) 
 		addrlo <= uo_out[7:1];
 	always @(posedge clk)
-	if (write && (addrhi!=8'hff || addrlo != 7'h7f)) 
-		m[{addrhi, addrlo, ind}] <= uo_out;
+	if (write && (addrhi!=2'h0 || addrmed!=8'hff || addrlo != 7'h7f)) 
+		m[{addrhi, addrmed, addrlo, ind}] <= uo_out;
 
-	wire log = write && addrhi==8'hff && addrlo == 7'h7f && ind;
+	wire log = write && addrhi==2'h0 && addrmed == 8'hff && addrlo == 7'h7f && ind;
     	reg [7:0]byte0;
     	always @(posedge clk)
-    	if (write && addrhi==8'hff && addrlo == 7'h7f && !ind)
+    	if (write &&  addrhi== 2'b0 && addrmed==8'hff && addrlo == 7'h7f && !ind)
 		byte0 <= uo_out;
 	wire [15:0]log_out = {uo_out, byte0};
 

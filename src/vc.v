@@ -438,8 +438,8 @@ module execute(input clk, input reset,
 		input br, input [2:0]cond,
 		
 		input	iready,
-		output	[RV-1:1]pc,
-		output	[RV-1:RV/16]addr,
+		output	[VA-1:1]pc,
+		output	[VA-1:RV/16]addr,
 		output	[RV-1:0]wdata,
 		input			wdone,
 		output	[(RV/8)-1:0]wmask,
@@ -456,13 +456,14 @@ module execute(input clk, input reset,
 		input		mmu_rd_miss_fault, mmu_wr_miss_fault, mmu_rd_prot_fault, mmu_wr_prot_fault
 	);
 	parameter RV=32;
+	parameter VA=RV;
 	parameter MMU = 0;
 
-	assign pc = r_pc;
+	assign pc = r_pc[VA-1:1];
 	assign rstrobe = {r_read_stall&(~cond[0]|r_wb[0]), r_read_stall&(~cond[0]|~r_wb[0])};
 	assign ifetch = r_fetch;
 	assign wdata = r_wdata;
-	assign addr = r_wb[RV-1:RV/16];
+	assign addr = r_wb[VA-1:RV/16];
 	assign  wmask = r_wmask;
 	reg [(RV/8)-1:0]r_wmask;
 	reg [RV-1:0]r_wdata;
@@ -480,12 +481,28 @@ module execute(input clk, input reset,
 	wire	mmu_trap;
 	wire  sys_trap = trap|mmu_trap;
 
-	always @(*) 
-	if (br) begin
-		r1 = {r_pc, sys_trap||interrupt&r_ie?r_ie:1'b0};
-	end else begin
-		r1 = r1reg;
-	end
+	generate 
+
+		if (VA < RV) begin
+
+			always @(*) 
+			if (br) begin
+				r1 = {{(RV-VA){1'b0}}, r_pc, sys_trap||interrupt&r_ie?r_ie:1'b0};
+			end else begin
+				r1 = r1reg;
+			end
+
+		end else begin
+
+			always @(*) 
+			if (br) begin
+				r1 = {r_pc, sys_trap||interrupt&r_ie?r_ie:1'b0};
+			end else begin
+				r1 = r1reg;
+			end
+
+		end
+	endgenerate
 
 	wire sup_enabled;
 	wire prev_sup_enabled;
@@ -720,21 +737,22 @@ module execute(input clk, input reset,
 		end
 	endgenerate
 
-	reg [RV-1:1 ]r_pc, c_pc;
-	wire [RV-1:1 ]pc_plus_1 = r_pc+1;
+	reg [VA-1:1 ]r_pc, c_pc;
+	wire [VA-1:1 ]pc_plus_1 = r_pc+1;
 
 
 	always @(*)
-	casez ({reset, r_read_stall, valid, sys_trap, interrupt&r_ie, jmp, br&br_taken})  // synthesis full_case parallel_case
-	7'b1??????:	c_pc = 0;
-	7'b0011???:	c_pc = 2;	// 4
-	7'b00101??:	c_pc = 4;	// 8
-	7'b0010010:	c_pc = c_wb[RV-1:1];
-	7'b00100?1:	c_pc = c_wb[RV-1:1];
-	7'b0010000:	c_pc = pc_plus_1;
-	7'b01?????:	c_pc = r_pc;
-	7'b000????:	c_pc = r_pc;
-	default:	c_pc = r_pc;
+	casez ({reset, r_read_stall, valid, sys_trap, mmu_trap, interrupt&r_ie, jmp, br&br_taken})  // synthesis full_case parallel_case
+	8'b1???????:	c_pc = 0;	// 0	reset
+	8'b00110???:	c_pc = 2;	// 4	trap
+	8'b0010?1??:	c_pc = 4;	// 8	interruopt
+	8'b00111???:	c_pc = 6;	// 12	mmu
+	8'b0010?010:	c_pc = c_wb[VA-1:1];
+	8'b0010?0?1:	c_pc = c_wb[VA-1:1];
+	8'b0010?000:	c_pc = pc_plus_1;
+	8'b01??????:	c_pc = r_pc;
+	8'b000?????:	c_pc = r_pc;
+	default:		c_pc = r_pc;
 	endcase
 
 	always @(posedge clk) begin
@@ -762,8 +780,8 @@ endmodule
 module mmu(input clk,  input reset, input is_pc, input mmu_enable, input mmu_proxy, input supmode,
 			input [RV-1:RV/16]pca,
 			input [RV-1:RV/16]addra, 
-			output [PV-1:RV/16]raddr,
-			output [PV-1:RV/16]waddr, 
+			output [PA-1:RV/16]raddr,
+			output [PA-1:RV/16]waddr, 
 			output		   rd_miss_fault,
 			output		   wr_miss_fault,
 			output		   rd_prot_fault,
@@ -772,7 +790,8 @@ module mmu(input clk,  input reset, input is_pc, input mmu_enable, input mmu_pro
 			input [RV-1:0]reg_data);
 
 	parameter RV=16;
-	parameter PV=RV;
+	parameter PA=RV;
+	parameter VA=RV;
 	parameter NMMU=8;
 
 	parameter UNTOUCHED = RV-$clog2(NMMU);
@@ -787,10 +806,10 @@ module mmu(input clk,  input reset, input is_pc, input mmu_enable, input mmu_pro
 
 	assign rd_prot_fault = mmu_enable && (is_pc && !r_x[rd_sel]);
 	assign wr_prot_fault = mmu_enable && !r_writeable[wr_sel];
-	reg [PV-1:UNTOUCHED]r_vtop[0:2*NMMU-1];
+	reg [PA-1:UNTOUCHED]r_vtop[0:2*NMMU-1];
 
-	assign raddr = {(mmu_enable ? r_vtop[rd_sel]:{{PV-RV{1'b0}}, is_pc?pca[RV-1:UNTOUCHED]:addra[RV-1:UNTOUCHED]}), is_pc?pca[UNTOUCHED-1:RV/16]:addra[UNTOUCHED-1:RV/16]};
-	assign waddr = {(mmu_enable ? r_vtop[wr_sel]:{{PV-RV{1'b0}}, addra[RV-1:UNTOUCHED]}), addra[UNTOUCHED-1:RV/16]};
+	assign raddr = {(mmu_enable ? r_vtop[rd_sel]:{{PA-RV{1'b0}}, is_pc?pca[RV-1:UNTOUCHED]:addra[RV-1:UNTOUCHED]}), is_pc?pca[UNTOUCHED-1:RV/16]:addra[UNTOUCHED-1:RV/16]};
+	assign waddr = {(mmu_enable ? r_vtop[wr_sel]:{{PA-RV{1'b0}}, addra[RV-1:UNTOUCHED]}), addra[UNTOUCHED-1:RV/16]};
 
 	wire [$clog2(NMMU):0]reg_addr = reg_data[$clog2(NMMU)+4-1:3];
 	always @(posedge clk)
@@ -798,7 +817,7 @@ module mmu(input clk,  input reset, input is_pc, input mmu_enable, input mmu_pro
 		r_valid <= 0;
 	end else
 	if (reg_write) begin
-		r_vtop[reg_addr] <= reg_data[RV-1:RV-(PV-UNTOUCHED)];
+		r_vtop[reg_addr] <= reg_data[RV-1:RV-(PA-UNTOUCHED)];
 		r_valid[reg_addr] <= reg_data[0];
 		r_x[reg_addr] <= reg_data[1];
 		r_writeable[reg_addr] <= reg_data[2];
@@ -809,17 +828,18 @@ endmodule
 
 module cpu(input clk, input reset_in,
 		input interrupt,
-		output [PV-1:RV/16]raddr,
+		output [PA-1:RV/16]raddr,
 		output	[1:0]rreq,
 		input	rdone,
 		input [RV-1:0]rdata,
-		output [PV-1:RV/16]waddr,
+		output [PA-1:RV/16]waddr,
 		output [(RV/8)-1:0]wmask,
 		output [RV-1:0]wdata,
 		input wdone);
 
 	parameter RV=16;
-	parameter PV=RV;
+	parameter PA=RV;
+	parameter VA=RV;
 	parameter MMU=0;
 	parameter NMMU=8;
 
@@ -833,15 +853,15 @@ module cpu(input clk, input reset_in,
 	wire		mmu_rd_miss_fault, mmu_wr_miss_fault, mmu_rd_prot_fault, mmu_wr_prot_fault;
 	generate
 		if (MMU == 0) begin
-			assign raddr = |rstrobe?addr[RV-1:RV/16]:pc[RV-1:RV/16];
-			assign waddr = addr[RV-1:RV/16];
+			assign raddr = |rstrobe?addr[VA-1:RV/16]:pc[VA-1:RV/16];
+			assign waddr = addr[VA-1:RV/16];
 		end else begin
-			mmu   #(.PV(PV), .RV(RV), .NMMU(NMMU))mmu(.clk(clk), .reset(reset), .supmode(supmode),
+			mmu   #(.VA(VA), .PA(PA), .RV(RV), .NMMU(NMMU))mmu(.clk(clk), .reset(reset), .supmode(supmode),
 						.mmu_enable(mmu_enable),
 						.mmu_proxy(mmu_proxy),
 						.is_pc(~|rstrobe),
-						.pca(pc[RV-1:RV/16]),
-						.addra(addr[RV-1:RV/16]),
+						.pca(pc[VA-1:RV/16]),
+						.addra(addr[VA-1:RV/16]),
 						.raddr(raddr),
 						.waddr(waddr),
 						.rd_miss_fault(mmu_rd_miss_fault),
@@ -873,8 +893,8 @@ module cpu(input clk, input reset_in,
 	wire		needs_rs2; 
 	wire [RV-1:0]imm;
 
-	wire [RV-1:1]pc;
-	wire [RV-1:RV/16]addr;
+	wire [VA-1:1]pc;
+	wire [VA-1:RV/16]addr;
 	wire [15:0]ins;
 	wire		 iready;
 	wire		 ifetch;
@@ -910,7 +930,7 @@ module cpu(input clk, input reset_in,
 		.needs_rs2(needs_rs2), 
 		.imm(imm));
 
-	execute #(.RV(RV), .MMU(MMU))ex(.clk(clk), .reset(reset),
+	execute #(.VA(VA), .RV(RV), .MMU(MMU))ex(.clk(clk), .reset(reset),
 		.interrupt(interrupt),
 		.pc(pc),
 		.ifetch(ifetch),

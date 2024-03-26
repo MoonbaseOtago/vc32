@@ -12,13 +12,14 @@ module tt_um_vc32_cpu #( parameter MAX_COUNT = 24'd10_000_000 ) (
 );
 
 	parameter RV=16;
-	parameter PV=18;
+	parameter VA=16;
+	parameter PA=18;
 	parameter MMU=1;
 	parameter NMMU=8;
 	
 
 	wire [RV-1:0]rdata, wdata;
-	wire [PV-1:RV/16]raddr, waddr;
+	wire [PA-1:RV/16]raddr, waddr;
 	wire rdone, wdone;
 	wire [1:0]rreq;
 	wire [(RV/8)-1:0]wmask;
@@ -77,12 +78,12 @@ module tt_um_vc32_cpu #( parameter MAX_COUNT = 24'd10_000_000 ) (
 			r_rdone <= 0;
 			r_wdone <= 0;
 			if (|wmask) begin
-				r_out <= waddr[PV-1:16];
+				r_out <= waddr[PA-1:16];
 				r_latch_hi <= 1;
 				r_state <= 1;
 			end else
 			if (|rreq) begin
-				r_out <= raddr[PV-1:16];
+				r_out <= raddr[PA-1:16];
 				r_latch_hi <= 1;
 				r_state <= 5;
 			end
@@ -148,7 +149,7 @@ module tt_um_vc32_cpu #( parameter MAX_COUNT = 24'd10_000_000 ) (
 	endcase
 
 
-	cpu   #(.RV(RV), .PV(PV), .MMU(MMU), .NMMU(NMMU))cpu(.clk(clk), .reset_in(r_reset|!ena), 
+	cpu   #(.RV(RV), .VA(VA), .PA(PA), .MMU(MMU), .NMMU(NMMU))cpu(.clk(clk), .reset_in(r_reset|!ena), 
 			.interrupt(interrupt),
 			.raddr(raddr),
 			.rdata(rdata),
