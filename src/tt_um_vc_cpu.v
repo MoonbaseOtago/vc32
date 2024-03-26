@@ -11,7 +11,7 @@ module tt_um_vc32_cpu #( parameter MAX_COUNT = 24'd10_000_000 ) (
     input  wire       rst_n     // reset_n - low to reset
 );
 
-	parameter RV=32;
+	parameter RV=16;
 
 	wire [RV-1:0]rdata, wdata;
 	wire [RV-1:RV/16]raddr, waddr;

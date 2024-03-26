@@ -1,11 +1,14 @@
+`define MULT 1
 //
 //	VC - minimal 32-bit C-only riscv - only has 8 regs
 //
 //	registers
-//		1 	- lr  *
-//		2	- sp  *
-//		3	- epc *
-//		4	- csr *
+//		1 	- lr  *+
+//		2	- sp  *+
+//		3	- epc *+
+//		4	- csr *+
+//		5	- mmu *+
+//		7	- mul_hi *
 //		8	- s0
 //		9	- s1
 //		10 	- a0
@@ -16,6 +19,7 @@
 //		15  - a5
 //
 //		(*) only accessable with lwsp/stsp and mv (and register specfic instructions), epc can be the source for an indirect jump
+//		(+) only accessable from sup mode
 //	
 //
 //	instructions:
@@ -52,6 +56,7 @@
 //		C.SBSP - replaces C.SDSP		**
 //		C.LTZ 
 //		C.GEZ
+//		C.MUL		r, r
 //
 //	** extra bits
 //		
@@ -78,6 +83,9 @@ module decode(input clk, input reset,
 		output load,
 		output store, 
 		output alu, 
+`ifdef MULT
+		output mult,
+`endif
 		output [2:0]op,
 		output [3:0]rs1, output[3:0]rs2, output [3:0]rd,
 		output needs_rs2, 
@@ -101,6 +109,9 @@ module decode(input clk, input reset,
 	reg[3:0]r_rd, c_rd; assign rd = r_rd;
 	reg		r_needs_rs2, c_needs_rs2; assign needs_rs2 = r_needs_rs2;
 	reg[RV-1:0]r_imm, c_imm; assign imm = r_imm;
+`ifdef MULT
+	reg		r_mult, c_mult; assign mult = r_mult;
+`endif
 
 	always @(*) begin
 		c_trap = 0;
@@ -116,6 +127,9 @@ module decode(input clk, input reset,
 		c_imm = {RV{1'bx}};
 		c_jmp = 0;
 		c_br = 0;
+`ifdef MULT
+		c_mult = 0;
+`endif
 		case (ins[1:0])  // synthesis full_case parallel_case
 		2'b00:
 			case (ins[15:13]) // synthesis full_case parallel_case
@@ -358,6 +372,25 @@ module decode(input clk, input reset,
 						c_op = `OP_ADD;
 						c_imm =  {{(RV-8){ins[12]}},ins[6:5],ins[2],ins[11:10],ins[4:3],1'b0};
 					end
+			3'b100:	begin
+						c_rd = {1'b1, ins[9:7]};
+						c_rs1 = {1'b1, ins[9:7]};
+						c_rs2 = {1'b1, ins[4:2]};
+						c_imm = {{(RV-6){1'b0}}, ins[2], ins[12], ins[4:3], ins[6:5]};
+						c_alu = 0;
+						case (ins[11:10]) // synthesis full_case parallel_case
+						2'b11: begin
+								c_needs_rs2 = 1;
+								case ({ins[12],ins[6:5]}) // synthesis full_case parallel_case
+`ifdef MULT
+								3'b0_00:	c_mult = 1;
+`endif
+								default:	c_trap = 1;
+								endcase
+							   end
+						default: c_trap = 1;
+						endcase
+					end
 			default: c_trap = 1;
 		    endcase
 		endcase
@@ -374,6 +407,9 @@ module decode(input clk, input reset,
 		r_store <= c_store;
 		r_load <= c_load;
 		r_alu <= c_alu;
+`ifdef MULT
+		r_mult <= c_mult;
+`endif
 		r_op <= c_op;
 		r_br <= c_br;
 		r_cond <= c_cond;
@@ -394,6 +430,9 @@ module execute(input clk, input reset,
 		input	store,
 		input	trap,
 		input	alu,
+`ifdef MULT
+		input	mult,
+`endif
 		input	[2:0]op,
 		input   jmp, 
 		input br, input [2:0]cond,
@@ -426,6 +465,9 @@ module execute(input clk, input reset,
 	reg [RV-1:0]r1, r2, r1reg, r2reg;
 	reg [RV-1:0]r_8, r_9, r_10, r_11, r_12, r_13, r_14, r_15, r_epc;
 	reg [RV-1:1]r_lr, r_sp;
+`ifdef MULT
+	reg [2*RV-1:1]r_mult, c_mult;
+`endif
 
 	always @(*) 
 	if (br) begin
@@ -444,6 +486,9 @@ module execute(input clk, input reset,
 	4'b0010:	r1reg = {r_sp, 1'b0};
 	4'b0011:	r1reg = r_epc;
 	4'b0100:	r1reg = {{(RV-1){1'b0}},r_ie};
+`ifdef MULT
+	4'b0111:	r1reg = r_mult[2*RV-1:RV];
+`endif
 	4'b1000:	r1reg = r_8;
 	4'b1001:	r1reg = r_9;
 	4'b1010:	r1reg = r_10;
@@ -500,15 +545,31 @@ module execute(input clk, input reset,
 	always @(posedge clk)
 		r_read_stall <= reset ? 0 : valid && load ? 1 : r_read_stall&rdone ? 0 : r_read_stall;
 
+`ifdef MULT
+	wire mult_stall, mdone;
+`endif
 	reg r_fetch;
 	always @(posedge clk)
-		r_fetch <= reset ? 1 : r_fetch ? !rdone : r_read_stall?rdone : |r_wmask?wdone : (valid && !load && !r_branch_stall && !store);
+		r_fetch <= reset ? 1 : (r_fetch ? !rdone : r_read_stall) ? rdone :
+`ifdef MULT
+				mult_stall ? !mdone :
+`endif
+				|r_wmask?wdone : (valid && !load && !r_branch_stall && !store
+`ifdef MULT
+								 && !mult_stall
+`endif
+							     );
 
 	reg [RV-1:0]r_wb, c_wb;
 	reg [3:0]r_wb_addr;
 	reg r_ie;
 	reg r_wb_valid;
 	always @(*)
+`ifdef MULT
+	if (mdone) begin
+		c_wb <= c_mult[RV-1:0];
+	end else
+`endif
 	case (op) // synthesis full_case parallel_case
 	`OP_ADD:	c_wb = r1 + r2;
 	`OP_SUB:	c_wb = r1 - r2;
@@ -519,6 +580,25 @@ module execute(input clk, input reset,
 	`OP_SRA:	c_wb = {{1{r1[RV-1]}}, r1[RV-1:1]};
 	`OP_SRL:	c_wb = {1'b0, r1[RV-1:1]};
 	endcase
+
+`ifdef MULT
+	wire start_mult = valid&mult;
+	reg r_mult_running, c_mult_running;
+	assign mult_stall = r_mult_running;
+	assign mdone = ~c_mult_running;
+	reg	[$clog2(RV)-1:0]r_mult_off, c_mult_off;
+	always @(*) begin
+		c_mult_off = start_mult?~0:r_mult_off-1;
+		c_mult = (start_mult?0:{r_mult[RV-2:0], 1'b0}) + (r1[c_mult_off]?r2:0);
+		c_mult_running = (reset|| r_mult_running&&c_mult_off==0 ? 0 : start_mult ? 1 : r_mult_running);
+	end
+
+	always @(posedge clk) begin
+		r_mult_off <= c_mult_off;
+		r_mult_running <= c_mult_running;
+		r_mult <= c_mult;
+	end
+`endif
 	
 
 	always @(posedge clk)
@@ -631,6 +711,9 @@ module cpu(input clk, input reset_in,
 	wire [15:0]ins;
 	wire		 iready;
 	wire		 ifetch;
+`ifdef MULT
+	wire		 mult;
+`endif
 	generate 
 		if (RV == 16) begin
 			assign ins = rdata;
@@ -650,6 +733,9 @@ module cpu(input clk, input reset_in,
 		.trap(trap),
 		.load(load),
 		.store(store), 
+`ifdef MULT
+		.mult(mult),
+`endif
 		.alu(alu),
 		.op(op),
 		.rs1(rs1),
@@ -677,6 +763,9 @@ module cpu(input clk, input reset_in,
 		.load(load),
 		.store(store), 
 		.alu(alu),
+`ifdef MULT
+		.mult(mult),
+`endif
 		.op(op),
 		.rs1(rs1),
 		.rs2(rs2),
