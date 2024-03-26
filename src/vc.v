@@ -778,8 +778,8 @@ module execute(input clk, input reset,
 endmodule
 
 module mmu(input clk,  input reset, input is_pc, input mmu_enable, input mmu_proxy, input supmode,
-			input [RV-1:RV/16]pca,
-			input [RV-1:RV/16]addra, 
+			input [VA-1:RV/16]pca,
+			input [VA-1:RV/16]addra, 
 			output [PA-1:RV/16]raddr,
 			output [PA-1:RV/16]waddr, 
 			output		   rd_miss_fault,
@@ -794,12 +794,12 @@ module mmu(input clk,  input reset, input is_pc, input mmu_enable, input mmu_pro
 	parameter VA=RV;
 	parameter NMMU=8;
 
-	parameter UNTOUCHED = RV-$clog2(NMMU);
+	parameter UNTOUCHED = VA-$clog2(NMMU);
 	reg [2*NMMU-1:0]r_valid;
 	reg [2*NMMU-1:0]r_writeable;
 	reg [2*NMMU-1:0]r_x;
-	wire [$clog2(NMMU):0]rd_sel = {supmode&~mmu_proxy, is_pc?pca[RV-1:UNTOUCHED]:addra[RV-1:UNTOUCHED]};
-	wire [$clog2(NMMU):0]wr_sel = {supmode&~mmu_proxy, addra[RV-1:UNTOUCHED]};
+	wire [$clog2(NMMU):0]rd_sel = {supmode&~mmu_proxy, is_pc?pca[VA-1:UNTOUCHED]:addra[RV-1:UNTOUCHED]};
+	wire [$clog2(NMMU):0]wr_sel = {supmode&~mmu_proxy, addra[VA-1:UNTOUCHED]};
 
 	assign rd_miss_fault = mmu_enable && !r_valid[rd_sel];
 	assign wr_miss_fault = mmu_enable && !r_valid[wr_sel];
@@ -808,8 +808,8 @@ module mmu(input clk,  input reset, input is_pc, input mmu_enable, input mmu_pro
 	assign wr_prot_fault = mmu_enable && !r_writeable[wr_sel];
 	reg [PA-1:UNTOUCHED]r_vtop[0:2*NMMU-1];
 
-	assign raddr = {(mmu_enable ? r_vtop[rd_sel]:{{PA-RV{1'b0}}, is_pc?pca[RV-1:UNTOUCHED]:addra[RV-1:UNTOUCHED]}), is_pc?pca[UNTOUCHED-1:RV/16]:addra[UNTOUCHED-1:RV/16]};
-	assign waddr = {(mmu_enable ? r_vtop[wr_sel]:{{PA-RV{1'b0}}, addra[RV-1:UNTOUCHED]}), addra[UNTOUCHED-1:RV/16]};
+	assign raddr = {(mmu_enable ? r_vtop[rd_sel]:{{PA-RV{1'b0}}, is_pc?pca[VA-1:UNTOUCHED]:addra[VA-1:UNTOUCHED]}), is_pc?pca[UNTOUCHED-1:RV/16]:addra[UNTOUCHED-1:RV/16]};
+	assign waddr = {(mmu_enable ? r_vtop[wr_sel]:{{PA-RV{1'b0}}, addra[VA-1:UNTOUCHED]}), addra[UNTOUCHED-1:RV/16]};
 
 	wire [$clog2(NMMU):0]reg_addr = reg_data[$clog2(NMMU)+4-1:3];
 	always @(posedge clk)
