@@ -466,7 +466,7 @@ module execute(input clk, input reset,
 	reg [RV-1:0]r_8, r_9, r_10, r_11, r_12, r_13, r_14, r_15, r_epc;
 	reg [RV-1:1]r_lr, r_sp;
 `ifdef MULT
-	reg [2*RV-1:1]r_mult, c_mult;
+	reg [2*RV-1:0]r_mult, c_mult;
 `endif
 
 	always @(*) 
@@ -567,7 +567,7 @@ module execute(input clk, input reset,
 	always @(*)
 `ifdef MULT
 	if (mdone) begin
-		c_wb <= c_mult[RV-1:0];
+		c_wb = c_mult[RV-1:0];
 	end else
 `endif
 	case (op) // synthesis full_case parallel_case
@@ -589,7 +589,7 @@ module execute(input clk, input reset,
 	reg	[$clog2(RV)-1:0]r_mult_off, c_mult_off;
 	always @(*) begin
 		c_mult_off = start_mult?~0:r_mult_off-1;
-		c_mult = (start_mult?0:{r_mult[RV-2:0], 1'b0}) + (r1[c_mult_off]?r2:0);
+		c_mult = (start_mult ? {2*RV{1'b0}} : {r_mult[2*RV-2:0], 1'b0}) + (r1[c_mult_off]?{r2,{RV{1'b0}}}:{2*RV{1'b0}});
 		c_mult_running = (reset|| r_mult_running&&c_mult_off==0 ? 0 : start_mult ? 1 : r_mult_running);
 	end
 
@@ -659,11 +659,13 @@ module execute(input clk, input reset,
 
 	generate
 		if (RV == 16) begin
+			wire [1:0]all_on = ~0;
 			always @(posedge clk) 
-				r_wmask <= reset||wdone ? 0 : |r_wmask? r_wmask : !valid||!store?0: !cond[0]? 2'b11: {c_wb[0], ~c_wb[0]};
+				r_wmask <= reset||wdone ? 0 : |r_wmask? r_wmask : !valid||!store?0: !cond[0]? all_on: {c_wb[0], ~c_wb[0]};
 		end else begin
+			wire [3:0]all_on = ~0;
 			always @(posedge clk) 
-				r_wmask <= reset||wdone?0:|r_wmask? r_wmask :!valid||!store?0: !cond[0]? 4'b1111: {c_wb[1:0]==3, c_wb[1:0]==2, c_wb[1:0]==1, c_wb[1:0]==0};
+				r_wmask <= reset||wdone?0:|r_wmask? r_wmask :!valid||!store?0: !cond[0]? all_on: {c_wb[1:0]==3, c_wb[1:0]==2, c_wb[1:0]==1, c_wb[1:0]==0};
 		end
 	endgenerate
 

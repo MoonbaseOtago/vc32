@@ -19,6 +19,27 @@ module tt_um_vc32_cpu #( parameter MAX_COUNT = 24'd10_000_000 ) (
 	wire [1:0]rreq;
 	wire [(RV/8)-1:0]wmask;
 
+	wire [(RV/8)-1:0]all_on = ~0;
+
+	
+	reg [7:0]w_out;
+	generate	
+		if (RV==16) begin
+			always @(*)
+				w_out = wmask[0]?wdata[7:0]:wdata[15:8];
+		end else begin
+			always @(*)
+			if (wmask[0]) begin
+				w_out = wdata[7:0];
+			end else 
+			case (wmask[3:1]) // synthesis full_case parallel_case
+			3'b??1: w_out = wdata[15:8];
+			3'b?1?: w_out = wdata[23:16];
+			3'b1??: w_out = wdata[31:24];
+			endcase
+		end
+	endgenerate
+
 	reg r_reset;
 	always @(posedge clk)
 		r_reset <= ~rst_n;
@@ -70,22 +91,11 @@ module tt_um_vc32_cpu #( parameter MAX_COUNT = 24'd10_000_000 ) (
 			r_state <= 2;
 		end
 	2:	begin
-			if (RV==16) begin
-				r_out <= wmask[0]?wdata[7:0]:wdata[15:8];
-			end else begin
-				if (wmask[0]) begin
-					r_out <= wdata[7:0];
-				end else 
-				case (wmask[3:1]) // synthesis full_case parallel_case
-				3'b??1: r_out <= wdata[15:8];
-				3'b?1?: r_out <= wdata[23:16];
-				3'b1??: r_out <= wdata[31:24];
-				endcase
-			end
+			r_out <= w_out;
 			r_latch_lo <= 0;
 			r_write <= 1;
-			r_state <= ((RV==16 ? wmask==2'b11 : wmask!=4'b1111) ?3:7);
-			r_wdone <= (RV==16 ? wmask!=2'b11 : wmask!=4'b1111);
+			r_state <= (wmask!=all_on ?3:7);
+			r_wdone <= (wmask!=all_on);
 		end
 	3:	begin
 			r_out <= wdata[15:8];
