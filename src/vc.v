@@ -121,7 +121,7 @@ module decode(input clk, input reset,
 		c_store = 0;
 		c_cond = 3'bx;
 		c_needs_rs2 = 0;
-		c_op = 3'bx;
+		c_op = 4'bx;
 		c_rs1 = 4'bx;
 		c_rs2 = 4'bx;
 		c_rd = 4'bx;
@@ -478,7 +478,7 @@ module execute(input clk, input reset,
 
 			always @(*) 
 			if (br) begin
-				r1 = {{(RV-VA){1'b0}}, r_pc, sys_trap||interrupt&r_ie?r_ie:1'b0};
+				r1 = {{(RV-VA){1'b0}}, r_pc, sys_trap||interrupt&r_ie?sup_enabled:1'b0};
 			end else begin
 				r1 = r1reg;
 			end
@@ -487,7 +487,7 @@ module execute(input clk, input reset,
 
 			always @(*) 
 			if (br) begin
-				r1 = {r_pc, sys_trap||interrupt&r_ie?r_ie:1'b0};
+				r1 = {r_pc, sys_trap||interrupt&r_ie?sup_enabled:1'b0};
 			end else begin
 				r1 = r1reg;
 			end
@@ -507,7 +507,7 @@ module execute(input clk, input reset,
 	4'b0001:	r1reg = {r_lr, 1'b0};
 	4'b0010:	r1reg = {r_sp, 1'b0};
 	4'b0011:	r1reg = r_epc; 
-	4'b0100:	r1reg = {{(RV-5){1'b0}}, mmu_proxy, mmu_enable, prev_sup_enabled, sup_enabled, r_ie};
+	4'b0100:	r1reg = {{(RV-5){1'b0}}, mmu_proxy, mmu_enable, sup_enabled, r_prev_ie, r_ie};
 `ifdef MULT
 	4'b0111:	r1reg = r_mult[2*RV-1:RV];
 `endif
@@ -669,8 +669,6 @@ module execute(input clk, input reset,
 			reg		r_supmode, c_supmode;
 			assign sup_enabled = r_supmode;
 			assign supmode = r_supmode;
-			reg		r_prev_sup_enabled, c_prev_sup_enabled;
-			assign prev_sup_enabled = r_prev_sup_enabled;
 			reg r_mmu_enable;
 			assign mmu_enable = r_mmu_enable;
 			reg r_mmu_proxy;
@@ -678,19 +676,6 @@ module execute(input clk, input reset,
 			
 			assign mmu_reg_data = r_wb;
 			assign mmu_reg_write = r_wb_valid && r_wb_addr == 4'b0101 && sup_enabled;
-
-			always @(*) begin
-				c_prev_sup_enabled = r_prev_sup_enabled;
-				if (valid && !r_read_stall && (sys_trap ||  interrupt&r_ie)) begin
-					c_prev_sup_enabled = r_supmode;
-				end else
-				if (r_wb_valid && r_wb_addr == 4'b0011)
-				if (sup_enabled)
-					c_prev_sup_enabled = r_wb[1];
-			end
-
-			always @(posedge clk)
-				r_prev_sup_enabled <= c_prev_sup_enabled;
 
 			always @(*) begin
 				c_supmode = r_supmode;
@@ -725,11 +710,25 @@ module execute(input clk, input reset,
 			assign mmu_trap = ((mmu_rd_miss_fault|mmu_rd_prot_fault)&r_read_stall) | ((mmu_wr_miss_fault|mmu_wr_prot_fault)&(|wmask));
 		end else begin
 			assign sup_enabled = 1;
-			assign prev_sup_enabled = 0;
 			assign mmu_enable = 0;
 			assign mmu_trap = 0;
 		end
 	endgenerate
+
+	reg		r_prev_ie, c_prev_ie;
+	always @(*) begin
+		c_prev_ie = r_prev_ie;
+		if (valid && !r_read_stall && (sys_trap ||  interrupt&r_ie)) begin
+			c_prev_ie = r_ie;
+		end else
+		if (r_wb_valid && r_wb_addr == 4'b0011)
+		if (sup_enabled)
+				c_prev_ie = r_wb[1];
+	end
+
+	always @(posedge clk)
+		r_prev_ie <= c_prev_ie;
+
 
 	reg [VA-1:1 ]r_pc, c_pc;
 	wire [VA-1:1 ]pc_plus_1 = r_pc+1;
@@ -751,7 +750,7 @@ module execute(input clk, input reset,
 
 	always @(posedge clk) begin
 		//r_trap <= !reset && valid && (trap || interrupt&&r_ie);
-		r_ie <= reset ? 0 : valid && (sys_trap || interrupt&&r_ie) ? 0: r_wb_valid && (r_wb_addr == 4) ? r_wb[0] : valid&&jmp&&rs1==3?r_epc[0] : r_ie; 
+		r_ie <= reset ? 0 : valid && (sys_trap || interrupt&&r_ie) ? 0: r_wb_valid && (r_wb_addr == 4) ? r_wb[0] : valid&&jmp&&rs1==3?r_prev_ie : r_ie; 
 		r_pc <= c_pc;
 		r_branch_stall <= !reset&valid&(jmp|br&br_taken);
 	end
