@@ -496,7 +496,6 @@ module execute(input clk, input reset,
 	endgenerate
 
 	wire sup_enabled;
-	wire prev_sup_enabled;
 
 	always @(*)
 	if (rs1 == r_wb_addr && r_wb_addr!=0) begin
