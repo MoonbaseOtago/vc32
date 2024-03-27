@@ -37,7 +37,7 @@ module tt_um_vc32_cpu #( parameter MAX_COUNT = 24'd10_000_000 ) (
 			if (wmask[0]) begin
 				w_out = wdata[7:0];
 			end else 
-			case (wmask[3:1]) // synthesis full_case parallel_case
+			casez (wmask[3:1]) // synthesis full_case parallel_case
 			3'b??1: w_out = wdata[15:8];
 			3'b?1?: w_out = wdata[23:16];
 			3'b1??: w_out = wdata[31:24];

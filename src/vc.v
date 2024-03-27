@@ -57,6 +57,8 @@
 //		C.LTZ 
 //		C.GEZ
 //		C.MUL		r, r
+//		C.ADDB		r, r, r  sign extended
+//		C.ADDBU		r, r, r  0 extended
 //
 //	** extra bits
 //		
@@ -70,6 +72,8 @@
 `define OP_SLL	5
 `define OP_SRA	6
 `define OP_SRL	7
+`define OP_ADDB	8
+`define OP_ADDBU 9
 
 module decode(input clk, input reset,
 	    input [15:0]ins, 
@@ -82,11 +86,10 @@ module decode(input clk, input reset,
 		output trap,
 		output load,
 		output store, 
-		output alu, 
 `ifdef MULT
 		output mult,
 `endif
-		output [2:0]op,
+		output [3:0]op,
 		output [3:0]rs1, output[3:0]rs2, output [3:0]rd,
 		output needs_rs2, 
 		output [RV-1:0]imm);
@@ -102,8 +105,7 @@ module decode(input clk, input reset,
 	reg[2:0]r_cond, c_cond; assign cond = r_cond;
 	reg		r_jmp, c_jmp; assign jmp = r_jmp;
 	reg		r_br, c_br; assign br = r_br;
-	reg		r_alu, c_alu; assign alu = r_alu;
-	reg[2:0]r_op, c_op; assign op = r_op;
+	reg[3:0]r_op, c_op; assign op = r_op;
 	reg[3:0]r_rs1, c_rs1; assign rs1 = r_rs1;
 	reg[3:0]r_rs2, c_rs2; assign rs2 = r_rs2;
 	reg[3:0]r_rd, c_rd; assign rd = r_rd;
@@ -120,7 +122,6 @@ module decode(input clk, input reset,
 		c_cond = 3'bx;
 		c_needs_rs2 = 0;
 		c_op = 3'bx;
-		c_alu = 0;
 		c_rs1 = 4'bx;
 		c_rs2 = 4'bx;
 		c_rd = 4'bx;
@@ -134,7 +135,6 @@ module decode(input clk, input reset,
 		2'b00:
 			case (ins[15:13]) // synthesis full_case parallel_case
 			3'b000: begin	// addi4sp
-						c_alu = 1;
 						c_op = `OP_ADD;
 						c_trap = ins[11:2]==0;
 						if (RV == 16) begin
@@ -197,7 +197,6 @@ module decode(input clk, input reset,
 			endcase
 		2'b01:casez (ins[15:13]) // synthesis full_case parallel_case
 			3'b000:	begin	// addi **
-						c_alu = 1;
 						c_op = `OP_ADD;
 						c_rs1 = {1'b1, ins[9:7]};
 						c_rd = {1'b1, ins[9:7]};
@@ -211,14 +210,12 @@ module decode(input clk, input reset,
 						c_rd = 1;
 					end
 			3'b010:	begin	// li
-						c_alu = 1;
 						c_op = `OP_ADD;
 						c_rs1 = 0;
 						c_rd = {1'b1, ins[9:7]};
 						c_imm = {{(RV-7){ins[4]}}, ins[3:2],  ins[12:10], ins[6:5]};
 					end
 			3'b011:	if (ins[10:7] == 2) begin	// addi4sp  ** 
-						c_alu = 1;
 						c_op = `OP_ADD;
 						c_rd = 2;
 						c_rs1 = 2;
@@ -228,7 +225,6 @@ module decode(input clk, input reset,
 							c_imm = {{(RV-8){ins[4]}},ins[3:2],ins[12:11],ins[5],ins[6],2'b00};
 						end
 					end else begin				// lui **
-						c_alu = 1;
 						c_op = `OP_ADD;
 						c_rd = {1'b1, ins[9:7]};
 						c_rs1 = 0;
@@ -239,7 +235,6 @@ module decode(input clk, input reset,
 						c_rs1 = {1'b1, ins[9:7]};
 						c_rs2 = {1'b1, ins[4:2]};
 						c_imm = {{(RV-6){1'b0}}, ins[2], ins[12], ins[4:3], ins[6:5]};
-						c_alu = 1;
 						case (ins[11:10]) // synthesis full_case parallel_case
 						2'b00: c_op = `OP_SRL;
 						2'b01: c_op = `OP_SRA;
@@ -274,7 +269,6 @@ module decode(input clk, input reset,
 		2'b10:
 			casez (ins[15:13])  // synthesis full_case parallel_case
 			3'b000:	begin	// slli
-						c_alu = 1;
 						c_op = `OP_SLL;
 						c_rd = {1'b1, ins[9:7]};
 						c_rs1 = {1'b1, ins[9:7]};
@@ -312,7 +306,6 @@ module decode(input clk, input reset,
 							c_rs2 = 0;
 							c_needs_rs2 = 1;
 						end else begin	// mv
-							c_alu = 1;
 							c_op = `OP_ADD;
 							c_rd = ins[10:7];
 							c_rs1 = 0;
@@ -330,7 +323,6 @@ module decode(input clk, input reset,
 							c_rs2 = 0;
 							c_needs_rs2 = 1;
 						end else begin	// ad
-							c_alu = 1;
 							c_op = `OP_ADD;
 							c_rd = ins[10:7];
 							c_rs1 = ins[10:7];
@@ -377,7 +369,6 @@ module decode(input clk, input reset,
 						c_rs1 = {1'b1, ins[9:7]};
 						c_rs2 = {1'b1, ins[4:2]};
 						c_imm = {{(RV-6){1'b0}}, ins[2], ins[12], ins[4:3], ins[6:5]};
-						c_alu = 0;
 						case (ins[11:10]) // synthesis full_case parallel_case
 						2'b11: begin
 								c_needs_rs2 = 1;
@@ -385,6 +376,8 @@ module decode(input clk, input reset,
 `ifdef MULT
 								3'b0_00:	c_mult = 1;
 `endif
+								3'b0_01:	c_op = `OP_ADDB;
+								3'b0_10:	c_op = `OP_ADDBU;
 								default:	c_trap = 1;
 								endcase
 							   end
@@ -406,7 +399,6 @@ module decode(input clk, input reset,
 		r_imm <= c_imm;
 		r_store <= c_store;
 		r_load <= c_load;
-		r_alu <= c_alu;
 `ifdef MULT
 		r_mult <= c_mult;
 `endif
@@ -429,11 +421,10 @@ module execute(input clk, input reset,
 		input	load,
 		input	store,
 		input	trap,
-		input	alu,
 `ifdef MULT
 		input	mult,
 `endif
-		input	[2:0]op,
+		input	[3:0]op,
 		input   jmp, 
 		input br, input [2:0]cond,
 		
@@ -591,6 +582,7 @@ module execute(input clk, input reset,
 `endif
 							     );
 
+	wire [RV-1:0]added = r1 + r2;
 	reg [RV-1:0]r_wb, c_wb;
 	reg [3:0]r_wb_addr;
 	reg r_ie;
@@ -602,7 +594,7 @@ module execute(input clk, input reset,
 	end else
 `endif
 	case (op) // synthesis full_case parallel_case
-	`OP_ADD:	c_wb = r1 + r2;
+	`OP_ADD:	c_wb = added;
 	`OP_SUB:	c_wb = r1 - r2;
 	`OP_XOR:	c_wb = r1 ^ r2;
 	`OP_OR:		c_wb = r1 | r2;
@@ -610,6 +602,8 @@ module execute(input clk, input reset,
 	`OP_SLL:	c_wb = {r1[RV-2:0], 1'b0};
 	`OP_SRA:	c_wb = {{1{r1[RV-1]}}, r1[RV-1:1]};
 	`OP_SRL:	c_wb = {1'b0, r1[RV-1:1]};
+	`OP_ADDB:	c_wb = {{(RV-8){added[7]}}, added[7:0]};
+	`OP_ADDBU:	c_wb = {{(RV-8){1'b0}}, added[7:0]};
 	endcase
 
 `ifdef MULT
@@ -887,8 +881,7 @@ module cpu(input clk, input reset_in,
 	wire		trap;
 	wire		load;
 	wire		store; 
-	wire		alu; 
-	wire   [2:0]op;
+	wire   [3:0]op;
 	wire   [3:0]rs1, rs2, rd;
 	wire		needs_rs2; 
 	wire [RV-1:0]imm;
@@ -922,7 +915,6 @@ module cpu(input clk, input reset_in,
 `ifdef MULT
 		.mult(mult),
 `endif
-		.alu(alu),
 		.op(op),
 		.rs1(rs1),
 		.rs2(rs2),
@@ -948,7 +940,6 @@ module cpu(input clk, input reset_in,
 		.trap(trap),
 		.load(load),
 		.store(store), 
-		.alu(alu),
 `ifdef MULT
 		.mult(mult),
 `endif
