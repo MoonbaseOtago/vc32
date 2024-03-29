@@ -835,9 +835,13 @@ module mmu(input clk,  input reset, input is_pc, input is_write, input mmu_enabl
 	if (reset) begin
 		r_fault_valid <= 0;
 		r_fault_write <= 0;
-		r_fault_write <= 0;
+		r_fault_ins <= 0;
 	end else
 	if (mmu_fault) begin
+		r_fault_valid <= !mmu_miss_fault;
+		r_fault_write <= is_write;
+		r_fault_ins <= is_pc;
+		r_fault_address <= taddr[RV-1: UNTOUCHED];
 	end
 
 
