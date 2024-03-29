@@ -443,7 +443,8 @@ module execute(input clk, input reset,
 		output[RV-1:0]mmu_reg_data,
 		output		supmode,
 		output		mmu_enable,
-		output		mmu_proxy,
+		output		mmu_i_proxy,
+		output		mmu_d_proxy,
 		input		mmu_rd_miss_fault, mmu_wr_miss_fault, mmu_rd_prot_fault, mmu_wr_prot_fault
 	);
 	parameter RV=32;
@@ -506,7 +507,7 @@ module execute(input clk, input reset,
 	4'b0001:	r1reg = {r_lr, 1'b0};
 	4'b0010:	r1reg = {r_sp, 1'b0};
 	4'b0011:	r1reg = r_epc; 
-	4'b0100:	r1reg = {{(RV-5){1'b0}}, mmu_proxy, mmu_enable, sup_enabled, r_prev_ie, r_ie};
+	4'b0100:	r1reg = {{(RV-6){1'b0}}, mmu_i_proxy, mmu_d_proxy, mmu_enable, sup_enabled, r_prev_ie, r_ie};
 `ifdef MULT
 	4'b0111:	r1reg = r_mult[2*RV-1:RV];
 `endif
@@ -670,8 +671,10 @@ module execute(input clk, input reset,
 			assign supmode = r_supmode;
 			reg r_mmu_enable;
 			assign mmu_enable = r_mmu_enable;
-			reg r_mmu_proxy;
-			assign mmu_proxy = r_mmu_proxy;
+			reg r_mmu_i_proxy;
+			assign mmu_i_proxy = r_mmu_i_proxy;
+			reg r_mmu_d_proxy;
+			assign mmu_d_proxy = r_mmu_d_proxy;
 			
 			assign mmu_reg_data = r_wb;
 			assign mmu_reg_write = r_wb_valid && r_wb_addr == 4'b0101 && sup_enabled;
@@ -701,10 +704,17 @@ module execute(input clk, input reset,
 
 			always @(posedge clk) 
 			if (reset) begin
-				r_mmu_proxy <= 0;
+				r_mmu_d_proxy <= 0;
 			end else 
 			if (r_wb_valid && r_wb_addr == 4'b0100 && sup_enabled)
-				r_mmu_proxy <= r_wb[4];
+				r_mmu_d_proxy <= r_wb[5];
+
+			always @(posedge clk) 
+			if (reset) begin
+				r_mmu_i_proxy <= 0;
+			end else 
+			if (r_wb_valid && r_wb_addr == 4'b0100 && sup_enabled)
+				r_mmu_i_proxy <= r_wb[4];
 
 			assign mmu_trap = ((mmu_rd_miss_fault|mmu_rd_prot_fault)&r_read_stall) | ((mmu_wr_miss_fault|mmu_wr_prot_fault)&(|wmask));
 		end else begin
@@ -769,7 +779,7 @@ module execute(input clk, input reset,
 
 endmodule
 
-module mmu(input clk,  input reset, input is_pc, input mmu_enable, input mmu_proxy, input supmode,
+module mmu(input clk,  input reset, input is_pc, input mmu_enable, input mmu_i_proxy, input mmu_d_proxy, input supmode,
 			input [VA-1:RV/16]pca,
 			input [VA-1:RV/16]addra, 
 			output [PA-1:RV/16]raddr,
@@ -787,23 +797,22 @@ module mmu(input clk,  input reset, input is_pc, input mmu_enable, input mmu_pro
 	parameter NMMU=8;
 
 	parameter UNTOUCHED = VA-$clog2(NMMU);
-	reg [2*NMMU-1:0]r_valid;
-	reg [2*NMMU-1:0]r_writeable;
-	reg [2*NMMU-1:0]r_x;
-	wire [$clog2(NMMU):0]rd_sel = {supmode&~mmu_proxy, is_pc?pca[VA-1:UNTOUCHED]:addra[RV-1:UNTOUCHED]};
-	wire [$clog2(NMMU):0]wr_sel = {supmode&~mmu_proxy, addra[VA-1:UNTOUCHED]};
+	reg [4*NMMU-1:0]r_valid;
+	reg [4*NMMU-1:0]r_writeable;
+	wire [$clog2(NMMU)+1:0]rd_sel = {supmode&~mmu_d_proxy, is_pc|(supmode&mmu_i_proxy), is_pc?pca[VA-1:UNTOUCHED]:addra[RV-1:UNTOUCHED]};
+	wire [$clog2(NMMU)+1:0]wr_sel = {supmode&~mmu_d_proxy, (supmode&mmu_i_proxy), addra[VA-1:UNTOUCHED]};
 
 	assign rd_miss_fault = mmu_enable && !r_valid[rd_sel];
 	assign wr_miss_fault = mmu_enable && !r_valid[wr_sel];
 
-	assign rd_prot_fault = mmu_enable && (is_pc && !r_x[rd_sel]);
+	assign rd_prot_fault = 0;
 	assign wr_prot_fault = mmu_enable && !r_writeable[wr_sel];
-	reg [PA-1:UNTOUCHED]r_vtop[0:2*NMMU-1];
+	reg [PA-1:UNTOUCHED]r_vtop[0:4*NMMU-1];
 
 	assign raddr = {(mmu_enable ? r_vtop[rd_sel]:{{PA-RV{1'b0}}, is_pc?pca[VA-1:UNTOUCHED]:addra[VA-1:UNTOUCHED]}), is_pc?pca[UNTOUCHED-1:RV/16]:addra[UNTOUCHED-1:RV/16]};
 	assign waddr = {(mmu_enable ? r_vtop[wr_sel]:{{PA-RV{1'b0}}, addra[VA-1:UNTOUCHED]}), addra[UNTOUCHED-1:RV/16]};
 
-	wire [$clog2(NMMU):0]reg_addr = reg_data[$clog2(NMMU)+4-1:3];
+	wire [$clog2(NMMU):0]reg_addr = reg_data[$clog2(NMMU)+4-1:2];
 	always @(posedge clk)
 	if (reset) begin
 		r_valid <= 0;
@@ -811,8 +820,7 @@ module mmu(input clk,  input reset, input is_pc, input mmu_enable, input mmu_pro
 	if (reg_write) begin
 		r_vtop[reg_addr] <= reg_data[RV-1:RV-(PA-UNTOUCHED)];
 		r_valid[reg_addr] <= reg_data[0];
-		r_x[reg_addr] <= reg_data[1];
-		r_writeable[reg_addr] <= reg_data[2];
+		r_writeable[reg_addr] <= reg_data[1];
 	end
 	
 endmodule
@@ -841,7 +849,7 @@ module cpu(input clk, input reset_in,
 	wire[RV-1:0]mmu_reg_data;
 	wire		supmode;
 	wire		mmu_enable;
-	wire		mmu_proxy;
+	wire		mmu_i_proxy, mmu_d_proxy;
 	wire		mmu_rd_miss_fault, mmu_wr_miss_fault, mmu_rd_prot_fault, mmu_wr_prot_fault;
 	generate
 		if (MMU == 0) begin
@@ -850,7 +858,8 @@ module cpu(input clk, input reset_in,
 		end else begin
 			mmu   #(.VA(VA), .PA(PA), .RV(RV), .NMMU(NMMU))mmu(.clk(clk), .reset(reset), .supmode(supmode),
 						.mmu_enable(mmu_enable),
-						.mmu_proxy(mmu_proxy),
+						.mmu_i_proxy(mmu_i_proxy),
+						.mmu_d_proxy(mmu_d_proxy),
 						.is_pc(~|rstrobe),
 						.pca(pc[VA-1:RV/16]),
 						.addra(addr[VA-1:RV/16]),
@@ -945,7 +954,8 @@ module cpu(input clk, input reset_in,
 		.mmu_reg_data(mmu_reg_data),
 		.supmode(supmode),
 		.mmu_enable(mmu_enable),
-		.mmu_proxy(mmu_proxy),
+		.mmu_i_proxy(mmu_i_proxy),
+		.mmu_d_proxy(mmu_d_proxy),
 		.mmu_rd_miss_fault(mmu_rd_miss_fault),
 		.mmu_wr_miss_fault(mmu_wr_miss_fault),
 		.mmu_rd_prot_fault(mmu_rd_prot_fault),

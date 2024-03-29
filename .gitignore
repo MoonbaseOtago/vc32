@@ -12,3 +12,4 @@ test/gate_level_netlist.v
 asm/a.out
 asm/vc.tab.c
 asm/vcasm
+bsd
