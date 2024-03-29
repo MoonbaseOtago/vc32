@@ -19,7 +19,7 @@ module tt_um_vc32_cpu #( parameter MAX_COUNT = 24'd10_000_000 ) (
 	
 
 	wire [RV-1:0]rdata, wdata;
-	wire [PA-1:RV/16]raddr, waddr;
+	wire [PA-1:RV/16]addrp;
 	wire rdone, wdone;
 	wire [1:0]rreq;
 	wire [(RV/8)-1:0]wmask;
@@ -79,26 +79,26 @@ module tt_um_vc32_cpu #( parameter MAX_COUNT = 24'd10_000_000 ) (
 			r_rdone <= 0;
 			r_wdone <= 0;
 			if (|wmask) begin
-				r_out <= waddr[PA-1:16];
+				r_out <= addrp[PA-1:16];
 				r_latch_hi <= 1;
 				r_state <= 1;
 			end else
 			if (|rreq) begin
 				r_multi_req = &rreq;
-				r_out <= raddr[PA-1:16];
+				r_out <= addrp[PA-1:16];
 				r_latch_hi <= 1;
 				r_state <= 5;
 				r_ind <= !rreq[0];
 			end
 		end
 	1:	begin
-			r_out <= waddr[15:8];
+			r_out <= addrp[15:8];
 			r_latch_hi <= 1;
 			r_latch_lo <= 1;
 			r_state <= 2;
 		end
 	2:	begin
-			r_out <= (RV==16 ? {waddr[7:1], 1'bx} : {waddr[7:2], 2'bxx});
+			r_out <= (RV==16 ? {addrp[7:1], 1'bx} : {addrp[7:2], 2'bxx});
 			r_latch_hi <= 0;
 			r_latch_lo <= 1;
 			r_ind <= ~wmask[0];
@@ -119,13 +119,13 @@ module tt_um_vc32_cpu #( parameter MAX_COUNT = 24'd10_000_000 ) (
 			r_state <= 9;
 		end
 	5:	begin
-			r_out <= raddr[15:8];
+			r_out <= addrp[15:8];
 			r_latch_hi <= 1;
 			r_latch_lo <= 1;
 			r_state <= 6;
 		end
 	6:	begin
-			r_out <= (RV==16 ? {raddr[7:1], 1'bx} : {raddr[7:2], 2'bxx});
+			r_out <= (RV==16 ? {addrp[7:1], 1'bx} : {addrp[7:2], 2'bxx});
 			r_latch_hi <= 0;
 			r_latch_lo <= 1;
 			r_state <= 7;
@@ -153,11 +153,10 @@ module tt_um_vc32_cpu #( parameter MAX_COUNT = 24'd10_000_000 ) (
 
 	cpu   #(.RV(RV), .VA(VA), .PA(PA), .MMU(MMU), .NMMU(NMMU))cpu(.clk(clk), .reset_in(r_reset|!ena), 
 			.interrupt(interrupt),
-			.raddr(raddr),
+			.addrp(addrp),
 			.rdata(rdata),
 			.rreq(rreq),
 			.rdone(rdone),
-			.waddr(waddr),
 			.wmask(wmask),
 			.wdata(wdata),
 			.wdone(wdone));

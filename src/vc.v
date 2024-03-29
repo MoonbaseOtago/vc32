@@ -8,6 +8,7 @@
 //		3	- epc *+
 //		4	- csr *+
 //		5	- mmu *+
+//		6   - kernel tmp *+
 //		7	- mul_hi *
 //		8	- s0
 //		9	- s1
@@ -84,6 +85,7 @@ module decode(input clk, input reset,
 		output br, 
 		output [2:0]cond,
 		output trap,
+		output sys_call,
 		output load,
 		output store, 
 `ifdef MULT
@@ -100,6 +102,7 @@ module decode(input clk, input reset,
 	always @(posedge clk)
 		r_ready <= rdone&!reset;
 	reg		r_trap, c_trap; assign trap = r_trap;
+	reg		r_sys_call, c_sys_call; assign sys_call = r_sys_call;
 	reg		r_load, c_load; assign load = r_load;
 	reg		r_store, c_store; assign store = r_store;
 	reg[2:0]r_cond, c_cond; assign cond = r_cond;
@@ -128,6 +131,7 @@ module decode(input clk, input reset,
 		c_imm = {RV{1'bx}};
 		c_jmp = 0;
 		c_br = 0;
+		c_sys_call = 0;
 `ifdef MULT
 		c_mult = 0;
 `endif
@@ -357,13 +361,19 @@ module decode(input clk, input reset,
 			default: c_trap = 1;
 			endcase
 		2'b11:	casez (ins[15:13]) // synthesis full_case parallel_case
-			3'b11?:	begin	//  bltz/bgez
-						c_br = 1;
-						c_cond = {2'b01, ins[13]};	// bltz/bgez
-						c_rs1 = {1'b1, ins[9:7]};
-						c_op = `OP_ADD;
-						c_imm =  {{(RV-8){ins[12]}},ins[6:5],ins[2],ins[11:10],ins[4:3],1'b0};
-					end
+			3'b000:	begin	//  
+						casez (ins[12:2]) // synthesis full_case parallel_case
+						11'b0??: begin				// trap instructions (use 01 for break)
+									c_sys_call = 0;
+									c_trap = 1;
+							   end
+						11'b0101:begin				// syscall
+									c_sys_call = 1;
+									c_trap = 1;
+							   end
+						default: c_trap = 1;
+						endcase
+				    end
 			3'b100:	begin
 						c_rd = {1'b1, ins[9:7]};
 						c_rs1 = {1'b1, ins[9:7]};
@@ -384,6 +394,13 @@ module decode(input clk, input reset,
 						default: c_trap = 1;
 						endcase
 					end
+			3'b11?:	begin	//  bltz/bgez
+						c_br = 1;
+						c_cond = {2'b01, ins[13]};	// bltz/bgez
+						c_rs1 = {1'b1, ins[9:7]};
+						c_op = `OP_ADD;
+						c_imm =  {{(RV-8){ins[12]}},ins[6:5],ins[2],ins[11:10],ins[4:3],1'b0};
+					end
 			default: c_trap = 1;
 		    endcase
 		endcase
@@ -392,6 +409,7 @@ module decode(input clk, input reset,
 	always @(posedge clk) 
 	if (rdone) begin
 		r_trap <= c_trap;
+		r_sys_call <= c_sys_call;
 		r_rs1 <= c_rs1;
 		r_rs2 <= c_rs2;
 		r_needs_rs2 <= c_needs_rs2;
@@ -421,6 +439,7 @@ module execute(input clk, input reset,
 		input	load,
 		input	store,
 		input	trap,
+		input	sys_call,
 `ifdef MULT
 		input	mult,
 `endif
@@ -441,11 +460,13 @@ module execute(input clk, input reset,
 
 		output		mmu_reg_write,
 		output[RV-1:0]mmu_reg_data,
+		input[RV-1:0]mmu_read,
 		output		supmode,
 		output		mmu_enable,
+		output		mmu_fault,
 		output		mmu_i_proxy,
 		output		mmu_d_proxy,
-		input		mmu_rd_miss_fault, mmu_wr_miss_fault, mmu_rd_prot_fault, mmu_wr_prot_fault
+		input		mmu_miss_fault, mmu_prot_fault
 	);
 	parameter RV=32;
 	parameter VA=RV;
@@ -464,7 +485,7 @@ module execute(input clk, input reset,
 
 
 	reg [RV-1:0]r1, r2, r1reg, r2reg;
-	reg [RV-1:0]r_8, r_9, r_10, r_11, r_12, r_13, r_14, r_15, r_epc;
+	reg [RV-1:0]r_8, r_9, r_10, r_11, r_12, r_13, r_14, r_15, r_epc, r_stmp;
 	reg [RV-1:1]r_lr, r_sp;
 `ifdef MULT
 	reg [2*RV-1:0]r_mult, c_mult;
@@ -508,6 +529,8 @@ module execute(input clk, input reset,
 	4'b0010:	r1reg = {r_sp, 1'b0};
 	4'b0011:	r1reg = r_epc; 
 	4'b0100:	r1reg = {{(RV-6){1'b0}}, mmu_i_proxy, mmu_d_proxy, mmu_enable, sup_enabled, r_prev_ie, r_ie};
+	4'b0101:	r1reg = mmu_read; 
+	4'b0101:	r1reg = r_stmp; 
 `ifdef MULT
 	4'b0111:	r1reg = r_mult[2*RV-1:RV];
 `endif
@@ -652,6 +675,7 @@ module execute(input clk, input reset,
 	4'b0011:	if (sup_enabled) r_epc <= r_wb;
 	//4'b0100: csr regs (not readable)
 	//4'b0101: MMU regs (not readable)
+	4'b0110:	if (sup_enabled) r_stmp <= r_wb;
 	//4'b0111: multiplier
 	4'b1000:	r_8 <= r_wb;
 	4'b1001:	r_9 <= r_wb;
@@ -716,11 +740,13 @@ module execute(input clk, input reset,
 			if (r_wb_valid && r_wb_addr == 4'b0100 && sup_enabled)
 				r_mmu_i_proxy <= r_wb[4];
 
-			assign mmu_trap = ((mmu_rd_miss_fault|mmu_rd_prot_fault)&r_read_stall) | ((mmu_wr_miss_fault|mmu_wr_prot_fault)&(|wmask));
+			assign mmu_trap = ((mmu_miss_fault|mmu_prot_fault)&r_read_stall) | ((mmu_miss_fault|mmu_prot_fault)&(|wmask));
+			assign mmu_fault = mmu_trap && valid && !r_read_stall;
 		end else begin
 			assign sup_enabled = 1;
 			assign mmu_enable = 0;
 			assign mmu_trap = 0;
+			assign mmu_fault = 0;
 		end
 	endgenerate
 
@@ -744,16 +770,17 @@ module execute(input clk, input reset,
 
 
 	always @(*)
-	casez ({reset, r_read_stall, valid, sys_trap, mmu_trap, interrupt&r_ie, jmp, br&br_taken})  // synthesis full_case parallel_case
-	8'b1???????:	c_pc = 0;	// 0	reset
-	8'b00110???:	c_pc = 2;	// 4	trap
-	8'b0010?1??:	c_pc = 4;	// 8	interruopt
-	8'b00111???:	c_pc = 6;	// 12	mmu
-	8'b0010?010:	c_pc = c_wb[VA-1:1];
-	8'b0010?0?1:	c_pc = c_wb[VA-1:1];
-	8'b0010?000:	c_pc = pc_plus_1;
-	8'b01??????:	c_pc = r_pc;
-	8'b000?????:	c_pc = r_pc;
+	casez ({reset, r_read_stall, valid, sys_trap, sys_call, mmu_trap, interrupt&r_ie, jmp, br&br_taken})  // synthesis full_case parallel_case
+	9'b1????????:	c_pc = 0;	// 0	reset
+	9'b001100???:	c_pc = 2;	// 4	trap
+	9'b0010??1??:	c_pc = 4;	// 8	interruopt
+	9'b001110???:	c_pc = 6;	// 12	syscall
+	9'b0011?1???:	c_pc = 8;	// 16	mmu
+	9'b0010??010:	c_pc = c_wb[VA-1:1];
+	9'b0010??0?1:	c_pc = c_wb[VA-1:1];
+	9'b0010??000:	c_pc = pc_plus_1;
+	9'b01???????:	c_pc = r_pc;
+	9'b000??????:	c_pc = r_pc;
 	default:		c_pc = r_pc;
 	endcase
 
@@ -779,16 +806,15 @@ module execute(input clk, input reset,
 
 endmodule
 
-module mmu(input clk,  input reset, input is_pc, input mmu_enable, input mmu_i_proxy, input mmu_d_proxy, input supmode,
-			input [VA-1:RV/16]pca,
-			input [VA-1:RV/16]addra, 
-			output [PA-1:RV/16]raddr,
-			output [PA-1:RV/16]waddr, 
-			output		   rd_miss_fault,
-			output		   wr_miss_fault,
-			output		   rd_prot_fault,
-			output		   wr_prot_fault,
+module mmu(input clk,  input reset, input is_pc, input is_write, input mmu_enable, input mmu_i_proxy, input mmu_d_proxy, input supmode,
+			input [VA-1:RV/16]pcv,
+			input [VA-1:RV/16]addrv, 
+			output [PA-1:RV/16]addrp,
+			output		   mmu_miss_fault,
+			output		   mmu_prot_fault,
 			input reg_write, 
+			input		   mmu_fault,
+			output[RV-1:0]reg_read,
 			input [RV-1:0]reg_data);
 
 	parameter RV=16;
@@ -797,20 +823,33 @@ module mmu(input clk,  input reset, input is_pc, input mmu_enable, input mmu_i_p
 	parameter NMMU=8;
 
 	parameter UNTOUCHED = VA-$clog2(NMMU);
+	reg [RV-1: UNTOUCHED]r_fault_address;
+	reg				     r_fault_valid;
+	reg				     r_fault_write;
+	reg				     r_fault_ins;
+	assign reg_read =  {r_fault_address, {(RV-UNTOUCHED-3){1'b0}}, r_fault_ins, r_fault_write, r_fault_valid};
+
+	wire  [VA-1:0]taddr = (!is_write&&is_pc? pcv: addrv);
+
+	always @(posedge clk)
+	if (reset) begin
+		r_fault_valid <= 0;
+		r_fault_write <= 0;
+		r_fault_write <= 0;
+	end else
+	if (mmu_fault) begin
+	end
+
+
 	reg [4*NMMU-1:0]r_valid;
 	reg [4*NMMU-1:0]r_writeable;
-	wire [$clog2(NMMU)+1:0]rd_sel = {supmode&~mmu_d_proxy, is_pc|(supmode&mmu_i_proxy), is_pc?pca[VA-1:UNTOUCHED]:addra[RV-1:UNTOUCHED]};
-	wire [$clog2(NMMU)+1:0]wr_sel = {supmode&~mmu_d_proxy, (supmode&mmu_i_proxy), addra[VA-1:UNTOUCHED]};
+	wire [$clog2(NMMU)+1:0]sel = {supmode&~mmu_d_proxy, is_pc|(supmode&mmu_i_proxy), taddr[VA-1:UNTOUCHED]};
 
-	assign rd_miss_fault = mmu_enable && !r_valid[rd_sel];
-	assign wr_miss_fault = mmu_enable && !r_valid[wr_sel];
-
-	assign rd_prot_fault = 0;
-	assign wr_prot_fault = mmu_enable && !r_writeable[wr_sel];
+	assign mmu_miss_fault = mmu_enable && !r_valid[sel];
+	assign mmu_prot_fault = mmu_enable && is_write && !r_writeable[sel];
 	reg [PA-1:UNTOUCHED]r_vtop[0:4*NMMU-1];
 
-	assign raddr = {(mmu_enable ? r_vtop[rd_sel]:{{PA-RV{1'b0}}, is_pc?pca[VA-1:UNTOUCHED]:addra[VA-1:UNTOUCHED]}), is_pc?pca[UNTOUCHED-1:RV/16]:addra[UNTOUCHED-1:RV/16]};
-	assign waddr = {(mmu_enable ? r_vtop[wr_sel]:{{PA-RV{1'b0}}, addra[VA-1:UNTOUCHED]}), addra[UNTOUCHED-1:RV/16]};
+	assign addrp = {(mmu_enable ? r_vtop[sel]:{{PA-RV{1'b0}}, taddr[VA-1:UNTOUCHED]}), taddr[UNTOUCHED-1:RV/16]};
 
 	wire [$clog2(NMMU)+1:0]reg_addr = reg_data[$clog2(NMMU)+4-1:2];
 	always @(posedge clk)
@@ -828,11 +867,10 @@ endmodule
 
 module cpu(input clk, input reset_in,
 		input interrupt,
-		output [PA-1:RV/16]raddr,
+		output [PA-1:RV/16]addrp,
 		output	[1:0]rreq,
 		input	rdone,
 		input [RV-1:0]rdata,
-		output [PA-1:RV/16]waddr,
 		output [(RV/8)-1:0]wmask,
 		output [RV-1:0]wdata,
 		input wdone);
@@ -847,30 +885,32 @@ module cpu(input clk, input reset_in,
 
 	wire		mmu_reg_write;
 	wire[RV-1:0]mmu_reg_data;
+	wire[RV-1:0]mmu_read;
 	wire		supmode;
 	wire		mmu_enable;
+	wire		mmu_fault;
 	wire		mmu_i_proxy, mmu_d_proxy;
-	wire		mmu_rd_miss_fault, mmu_wr_miss_fault, mmu_rd_prot_fault, mmu_wr_prot_fault;
+	wire		mmu_miss_fault, mmu_prot_fault;
 	generate
 		if (MMU == 0) begin
-			assign raddr = |rstrobe?addr[VA-1:RV/16]:pc[VA-1:RV/16];
-			assign waddr = addr[VA-1:RV/16];
+			assign addrp = |wmask||rstrobe?addr[VA-1:RV/16]:pc[VA-1:RV/16];
+			assign mmu_read = 'bx;
 		end else begin
 			mmu   #(.VA(VA), .PA(PA), .RV(RV), .NMMU(NMMU))mmu(.clk(clk), .reset(reset), .supmode(supmode),
 						.mmu_enable(mmu_enable),
 						.mmu_i_proxy(mmu_i_proxy),
 						.mmu_d_proxy(mmu_d_proxy),
 						.is_pc(~|rstrobe),
-						.pca(pc[VA-1:RV/16]),
-						.addra(addr[VA-1:RV/16]),
-						.raddr(raddr),
-						.waddr(waddr),
-						.rd_miss_fault(mmu_rd_miss_fault),
-						.wr_miss_fault(mmu_wr_miss_fault),
-						.rd_prot_fault(mmu_rd_prot_fault),
-						.wr_prot_fault(mmu_wr_prot_fault),
+						.is_write(|wmask),
+						.pcv(pc[VA-1:RV/16]),
+						.addrv(addr[VA-1:RV/16]),
+						.addrp(addrp),
+						.mmu_miss_fault(mmu_miss_fault),
+						.mmu_prot_fault(mmu_prot_fault),
+						.mmu_fault(mmu_fault),
 						.reg_write(mmu_reg_write),
-						.reg_data(mmu_reg_data));
+						.reg_data(mmu_reg_data),
+						.reg_read(mmu_read));
 		end
 	endgenerate
 	
@@ -886,6 +926,7 @@ module cpu(input clk, input reset_in,
 	wire		br; 
 	wire   [2:0]cond;
 	wire		trap;
+	wire		sys_call;
 	wire		load;
 	wire		store; 
 	wire   [3:0]op;
@@ -917,6 +958,7 @@ module cpu(input clk, input reset_in,
 		.br(br),
 		.cond(cond),
 		.trap(trap),
+		.sys_call(sys_call),
 		.load(load),
 		.store(store), 
 `ifdef MULT
@@ -945,6 +987,7 @@ module cpu(input clk, input reset_in,
 		.br(br),
 		.cond(cond),
 		.trap(trap),
+		.sys_call(sys_call),
 		.load(load),
 		.store(store), 
 `ifdef MULT
@@ -952,14 +995,14 @@ module cpu(input clk, input reset_in,
 `endif
 		.mmu_reg_write(mmu_reg_write),
 		.mmu_reg_data(mmu_reg_data),
+		.mmu_read(mmu_read),
 		.supmode(supmode),
 		.mmu_enable(mmu_enable),
+		.mmu_fault(mmu_fault),
 		.mmu_i_proxy(mmu_i_proxy),
 		.mmu_d_proxy(mmu_d_proxy),
-		.mmu_rd_miss_fault(mmu_rd_miss_fault),
-		.mmu_wr_miss_fault(mmu_wr_miss_fault),
-		.mmu_rd_prot_fault(mmu_rd_prot_fault),
-		.mmu_wr_prot_fault(mmu_wr_prot_fault),
+		.mmu_miss_fault(mmu_miss_fault),
+		.mmu_prot_fault(mmu_prot_fault),
 		.op(op),
 		.rs1(rs1),
 		.rs2(rs2),
