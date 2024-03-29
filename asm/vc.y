@@ -1,4 +1,4 @@
-%token t_la t_lr t_value t_sp t_epc t_csr t_s0 t_s1 t_a0 t_a1 t_a2 t_a3 t_a4 t_a5 t_and t_or t_xor t_sub t_add t_mv t_nop t_inv t_ebreak t_jalr t_jr t_lw t_lb t_sw t_sb t_lea t_lui t_li t_beqz t_bnez t_bltz t_bgez t_j t_jal t_sll t_srl t_sra t_word t_byte t_name t_nl t_mul t_mulhi t_mmu t_addb t_addbu
+%token t_la t_lr t_value t_sp t_epc t_csr t_s0 t_s1 t_a0 t_a1 t_a2 t_a3 t_a4 t_a5 t_and t_or t_xor t_sub t_add t_mv t_nop t_inv t_ebreak t_jalr t_jr t_lw t_lb t_sw t_sb t_lea t_lui t_li t_beqz t_bnez t_bltz t_bgez t_j t_jal t_sll t_srl t_sra t_word t_byte t_name t_nl t_mul t_mulhi t_mmu t_addb t_addbu t_syscall t_stmp
 %start  program
 %%
 
@@ -25,6 +25,7 @@ rx: 		t_lr			{ $$ = 1; }
 	|	t_epc			{ $$ = 3; }
 	|	t_csr			{ $$ = 4; }
 	|	t_mmu			{ $$ = 5; }
+	|	t_stmp			{ $$ = 6; }
 	|	t_mulhi			{ $$ = 7; }
 	;
 r:		xr			{ $$ = $1; }
@@ -55,8 +56,9 @@ ins:		t_and  rm ',' rm 	{ $$ = 0x8c61|($2<<7)|($4<<2); }
 	|	t_add  rx ',' r        	{ $$ = 0x9002|($2<<7)|($4<<2); } 
 	|	t_mv   r ',' r        	{ $$ = 0x8002|($2<<7)|($4<<2); } 
 	|	t_nop  			{ $$ = 0x0001; }
-	|	t_inv  		 	{ $$ = 0x0000; }
-	|	t_ebreak  		{ $$ = 0x9002; }
+	|	t_inv  		 	{ $$ = 0x0003; }
+	|	t_syscall  		{ $$ = 0x0013; }
+	|	t_ebreak  		{ $$ = 0x0007; }
 	|	t_jalr r  		{ $$ = 0x9002|($2<<7); }
 	|	t_jr r  		{ $$ = 0x8002|($2<<7); }
 	|	t_lw r ',' exp '(' t_sp ')'{ $$ = 0x4002|($2<<7)|offX($4); }

@@ -318,7 +318,7 @@ module decode(input clk, input reset,
 						end
 					end else begin
 						if (ins[6:2] == 0) begin	// jalr
-							c_trap = ins[10:7]==0; // ebreak
+							c_trap = ins[10:7]==0; 
 							c_jmp = 1;
 							c_cond = 3'bxx1;
 							c_op = `OP_ADD;

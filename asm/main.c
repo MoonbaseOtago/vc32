@@ -224,6 +224,8 @@ struct tab reserved[] = {
 	"a3", t_a3,
 	"a4", t_a4,
 	"a5", t_a5,
+	"stmp", t_stmp,
+	"syscall", t_syscall,
 	"addb", t_addb,
 	"addbu", t_addbu,
 	"mulhi", t_mulhi,
