@@ -609,7 +609,7 @@ module execute(input clk, input reset,
 	wire start_mult = valid&mult;
 	reg r_mult_running, c_mult_running;
 	assign mult_stall = r_mult_running;
-	assign mdone = ~c_mult_running;
+	assign mdone = ~c_mult_running&r_mult_running;
 	reg	[$clog2(RV)-1:0]r_mult_off, c_mult_off;
 	always @(*) begin
 		c_mult_off = start_mult?~0:r_mult_off-1;
@@ -865,7 +865,7 @@ module cpu(input clk, input reset_in,
 		end
 	endgenerate
 	
-	assign rreq={ifetch, ifetch}|rstrobe;
+	assign rreq={RV/8{ifetch}}|rstrobe;
 
 	wire reset = reset_in;
 	//wire reset = r_reset;

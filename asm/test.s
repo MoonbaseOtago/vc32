@@ -4,6 +4,9 @@
 	j	trap
 	.=8
 	j 	intr
+	.=12
+	j	mmu_trap
+mmu_trap:j	mmu_trap
 intr:	j	intr
 trap:	j	trap
 start:

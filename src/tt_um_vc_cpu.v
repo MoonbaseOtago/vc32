@@ -13,7 +13,7 @@ module tt_um_vc32_cpu #( parameter MAX_COUNT = 24'd10_000_000 ) (
 
 	parameter RV=16;
 	parameter VA=16;
-	parameter PA=18;
+	parameter PA=22;
 	parameter MMU=1;
 	parameter NMMU=8;
 	
@@ -61,6 +61,7 @@ module tt_um_vc32_cpu #( parameter MAX_COUNT = 24'd10_000_000 ) (
 	assign uio_oe=8'h7f;
 	assign uio_out = {4'b0000, r_latch_lo, r_latch_hi, r_write, r_ind};
 	wire interrupt = uio_in[7]; 
+	reg r_multi_req;
 	always @(posedge clk)
 	if (r_reset) begin
 		r_state <= 0;		
@@ -83,9 +84,11 @@ module tt_um_vc32_cpu #( parameter MAX_COUNT = 24'd10_000_000 ) (
 				r_state <= 1;
 			end else
 			if (|rreq) begin
+				r_multi_req = &rreq;
 				r_out <= raddr[PA-1:16];
 				r_latch_hi <= 1;
 				r_state <= 5;
+				r_ind <= !rreq[0];
 			end
 		end
 	1:	begin
@@ -105,7 +108,7 @@ module tt_um_vc32_cpu #( parameter MAX_COUNT = 24'd10_000_000 ) (
 			r_out <= w_out;
 			r_latch_lo <= 0;
 			r_write <= 1;
-			r_state <= (wmask!=all_on ?4:9);
+			r_state <= (wmask!=all_on ?9:4);
 			r_wdone <= (wmask!=all_on);
 		end
 	4:	begin
@@ -122,7 +125,6 @@ module tt_um_vc32_cpu #( parameter MAX_COUNT = 24'd10_000_000 ) (
 			r_state <= 6;
 		end
 	6:	begin
-			r_ind <= !rreq[0];
 			r_out <= (RV==16 ? {raddr[7:1], 1'bx} : {raddr[7:2], 2'bxx});
 			r_latch_hi <= 0;
 			r_latch_lo <= 1;
@@ -132,8 +134,8 @@ module tt_um_vc32_cpu #( parameter MAX_COUNT = 24'd10_000_000 ) (
 			r_in[7:0] <= ui_in;
 			r_latch_lo <= 0;
 			r_ind <= 1;
-			r_rdone <= ~(&rreq);
-			r_state <= ~(&rreq)? 9:8;
+			r_rdone <= ~r_multi_req;
+			r_state <= ~r_multi_req? 9:8;
 		end
 	8:	begin
 			r_in[15:8] <= ui_in;
