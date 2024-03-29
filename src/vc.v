@@ -530,7 +530,7 @@ module execute(input clk, input reset,
 	4'b0011:	r1reg = r_epc; 
 	4'b0100:	r1reg = {{(RV-6){1'b0}}, mmu_i_proxy, mmu_d_proxy, mmu_enable, sup_enabled, r_prev_ie, r_ie};
 	4'b0101:	r1reg = mmu_read; 
-	4'b0101:	r1reg = r_stmp; 
+	4'b0110:	r1reg = r_stmp; 
 `ifdef MULT
 	4'b0111:	r1reg = r_mult[2*RV-1:RV];
 `endif
@@ -829,7 +829,7 @@ module mmu(input clk,  input reset, input is_pc, input is_write, input mmu_enabl
 	reg				     r_fault_ins;
 	assign reg_read =  {r_fault_address, {(RV-UNTOUCHED-3){1'b0}}, r_fault_ins, r_fault_write, r_fault_valid};
 
-	wire  [VA-1:0]taddr = (!is_write&&is_pc? pcv: addrv);
+	wire  [VA-1:RV/16]taddr = (!is_write&&is_pc? pcv: addrv);
 
 	always @(posedge clk)
 	if (reset) begin

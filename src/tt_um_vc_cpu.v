@@ -84,7 +84,7 @@ module tt_um_vc32_cpu #( parameter MAX_COUNT = 24'd10_000_000 ) (
 				r_state <= 1;
 			end else
 			if (|rreq) begin
-				r_multi_req = &rreq;
+				r_multi_req <= &rreq;
 				r_out <= addrp[PA-1:16];
 				r_latch_hi <= 1;
 				r_state <= 5;
