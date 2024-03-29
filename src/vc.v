@@ -812,7 +812,7 @@ module mmu(input clk,  input reset, input is_pc, input mmu_enable, input mmu_i_p
 	assign raddr = {(mmu_enable ? r_vtop[rd_sel]:{{PA-RV{1'b0}}, is_pc?pca[VA-1:UNTOUCHED]:addra[VA-1:UNTOUCHED]}), is_pc?pca[UNTOUCHED-1:RV/16]:addra[UNTOUCHED-1:RV/16]};
 	assign waddr = {(mmu_enable ? r_vtop[wr_sel]:{{PA-RV{1'b0}}, addra[VA-1:UNTOUCHED]}), addra[UNTOUCHED-1:RV/16]};
 
-	wire [$clog2(NMMU):0]reg_addr = reg_data[$clog2(NMMU)+4-1:2];
+	wire [$clog2(NMMU)+1:0]reg_addr = reg_data[$clog2(NMMU)+4-1:2];
 	always @(posedge clk)
 	if (reset) begin
 		r_valid <= 0;
