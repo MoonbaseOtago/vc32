@@ -76,3 +76,5 @@ set ::env(CLOCK_PORT) {clk}
 # Don't use power rings or met5 layer
 set ::env(DESIGN_IS_CORE) 0
 set ::env(RT_MAX_LAYER) {met4}
+
+set ::env(FP_CORE_UTIL) s655

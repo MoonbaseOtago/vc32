@@ -823,11 +823,11 @@ module mmu(input clk,  input reset, input is_pc, input is_write, input mmu_enabl
 	parameter NMMU=8;
 
 	parameter UNTOUCHED = VA-$clog2(NMMU);
-	reg [RV-1: UNTOUCHED]r_fault_address;
+	reg [VA-1: UNTOUCHED]r_fault_address;
 	reg				     r_fault_valid;
 	reg				     r_fault_write;
 	reg				     r_fault_ins;
-	assign reg_read =  {r_fault_address, {(RV-UNTOUCHED-3){1'b0}}, r_fault_ins, r_fault_write, r_fault_valid};
+	assign reg_read =  {r_fault_address, {(RV-(VA-UNTOUCHED)-3){1'b0}}, r_fault_ins, r_fault_write, r_fault_valid};
 
 	wire  [VA-1:RV/16]taddr = (!is_write&&is_pc? pcv: addrv);
 
@@ -841,7 +841,7 @@ module mmu(input clk,  input reset, input is_pc, input is_write, input mmu_enabl
 		r_fault_valid <= !mmu_miss_fault;
 		r_fault_write <= is_write;
 		r_fault_ins <= is_pc;
-		r_fault_address <= taddr[RV-1: UNTOUCHED];
+		r_fault_address <= taddr[VA-1: UNTOUCHED];
 	end
 
 
