@@ -6,3 +6,7 @@ vcasm:	main.c vc.tab.c
 vc.tab.c: vc.y
 	bison vc.y -k
 
+test:	vcasm test.s
+	./vcasm -s -m -o ../test/init.v test.s
+	
+

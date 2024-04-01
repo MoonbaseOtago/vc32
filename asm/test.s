@@ -156,6 +156,28 @@ b12:				// should be 12
 	li 	s0, -3
 	sll	s0
 	sw	s0, (a5)	// fffa
+	li	s0, 3
+	li	s1, 8
+	mul	s0, s1
+	sw      s0, (a5)        // 24
+	mv	s0, mulhi
+	sw      s0, (a5)        // 0
+	li	s0, -1
+	mv	s1, s0
+	mul	s0, s1
+	sw      s0, (a5)        // 0001
+	mv	s0, mulhi
+	sw      s0, (a5)        // 0xfffe
+	li	s0, 0
+	mv	s1, s0
+	mul	s0, s1
+	sw      s0, (a5)        // 0
+	mv	s0, mulhi
+	sw      s0, (a5)        // 0
+	li	s0, 0x15
+	mv	stmp, s0
+	mv 	s1, stmp
+	sw      s1, (a5)        // 0x15
 	ebreak
 
 loc:	.word	0x99

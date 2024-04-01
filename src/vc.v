@@ -572,6 +572,12 @@ module execute(input clk, input reset,
 	4'b0001:	r2reg = {r_lr, 1'b0};
 	4'b0010:	r2reg = {r_sp, 1'b0};
 	4'b0011:	r2reg = r_epc;
+	4'b0100:	r2reg = {{(RV-6){1'b0}}, mmu_i_proxy, mmu_d_proxy, mmu_enable, sup_enabled, r_prev_ie, r_ie};
+	4'b0101:	r2reg = mmu_read; 
+	4'b0110:	r2reg = r_stmp; 
+`ifdef MULT
+	4'b0111:	r2reg = r_mult[2*RV-1:RV];
+`endif
 	4'b1000:	r2reg = r_8;
 	4'b1001:	r2reg = r_9;
 	4'b1010:	r2reg = r_10;
@@ -584,7 +590,11 @@ module execute(input clk, input reset,
 	endcase
 	
 	reg r_branch_stall;
-	wire valid = !reset && !r_branch_stall && iready;
+	wire valid = !reset && !r_branch_stall && iready
+`ifdef MULT
+		&& !r_mult_running
+`endif
+		;
 
 	reg r_read_stall;
 	always @(posedge clk)
@@ -597,7 +607,7 @@ module execute(input clk, input reset,
 	always @(posedge clk)
 		r_fetch <= reset ? 1 : (r_fetch ? !rdone : r_read_stall) ? rdone :
 `ifdef MULT
-				mult_stall ? !mdone :
+				mult_stall|r_mult_running ? mdone :
 `endif
 				|r_wmask?wdone : (valid && !load && !r_branch_stall && !store
 `ifdef MULT
@@ -632,7 +642,7 @@ module execute(input clk, input reset,
 `ifdef MULT
 	wire start_mult = valid&mult;
 	reg r_mult_running, c_mult_running;
-	assign mult_stall = r_mult_running;
+	assign mult_stall = c_mult_running;
 	assign mdone = ~c_mult_running&r_mult_running;
 	reg	[$clog2(RV)-1:0]r_mult_off, c_mult_off;
 	always @(*) begin
@@ -640,7 +650,7 @@ module execute(input clk, input reset,
 		if (r_wb_valid && r_wb_addr == 4'b0111) begin
 			c_mult = {r_wb, r_mult[RV-1:0]};
 		end else begin
-			c_mult = start_mult||r_mult_running ? ((start_mult ? {2*RV{1'b0}} : {r_mult[2*RV-2:0], 1'b0}) + (r1[c_mult_off]?{r2,{RV{1'b0}}}:{2*RV{1'b0}})):r_mult;
+			c_mult = start_mult||r_mult_running ? ((start_mult ? {2*RV{1'b0}} : {r_mult[2*RV-2:0], 1'b0}) + (r1[c_mult_off]?{{RV{1'b0}},r2}:{2*RV{1'b0}})):r_mult;
 		end
 		c_mult_running = (reset|| r_mult_running&&c_mult_off==0 ? 0 : start_mult ? 1 : r_mult_running);
 	end
@@ -654,7 +664,7 @@ module execute(input clk, input reset,
 	
 
 	always @(posedge clk)
-	if (!reset && valid && !((br|jmp)&!link) && !r_read_stall) begin
+	if (!reset && ((valid && !((br|jmp)&!link) && !r_read_stall && !mult_stall) || mdone)) begin
 		r_wb_valid <= !(load&!r_read_stall || store);
 		r_wb_addr <= (reset ?0 : sys_trap||(interrupt&r_ie) ? 3 : store? 0 : rd);
 		r_wb <= link||sys_trap||(interrupt&r_ie)?{pc_plus_1, r_ie}: c_wb;
