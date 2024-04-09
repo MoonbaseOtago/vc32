@@ -5,10 +5,24 @@
 	.=8
 	j 	intr
 	.=12
+	j	sys_trap
+	.=16
 	j	mmu_trap
-mmu_trap:j	mmu_trap
+mmu_vector:
+	.word	0
+mmu_trap:
+	la	a2, mmu_vector
+	lw	a2, (a2)
+	jr	a2
 intr:	j	intr
 trap:	j	trap
+syscall_vector:
+	.word	0
+sys_trap:
+	la	a2, syscall_vector
+	lw	a2, (a2)
+	jr	a2
+
 start:
 	li	a0, 5
 	li 	a1, 6
@@ -178,6 +192,90 @@ b12:				// should be 12
 	mv	stmp, s0
 	mv 	s1, stmp
 	sw      s1, (a5)        // 0x15
+// turn off mmu
+	li	a0, 32
+lp1:
+		add 	a0, -1
+		mv	a1, a0
+		sll	a1
+		sll	a1
+		mv	mmu, a1
+		bnez	a0, lp1
+//
+	li 	s1, 0x14
+	li	a0, 1
+	la	s0, r1
+	or	s0, a0
+	mv	epc, s0
+	jr	epc
+xx1:	j	xx1
+r1:
+	sw      s1, (a5)	// 0x14
+	mv	s1, csr
+	sw	s1, (a5)        // 0x4
+	
+	la      s0, r2
+	mv	epc, s0
+	jr	epc
+	j	xx1
+
+syscall1:
+	li 	a0, 0x19
+	sw      a0, (a5)        // 0x19
+	mv	s1, csr
+	sw	s1, (a5)        // 0x4
+	jr	epc
+
+
+r2:
+	la	a0, syscall1
+	la	a1, syscall_vector
+	sw	a0, (a1)
+
+	mv	s1, csr
+	sw	s1, (a5)        // 0x9
+sc:	syscall					// goes to syscall1
+r3:	li	a0, 0x1a	
+	sw      a0, (a5)        // 0x1a
+	mv	s1, csr
+	sw	s1, (a5)        // 0x0
+	
+	la	a0, syscall2
+	la	a1, syscall_vector
+	sw	a0, (a1)
+	syscall					// goes to syscall2
+syscall2:		
+	li	a0, 0x1b	
+	sw      a0, (a5)        // 0x1b
+	mv	s1, csr
+	sw	s1, (a5)        // 0x4
+	mv	s1, epc
+	li	a2, 1
+	and	s1, a2
+	sw	s1, (a5)        // 0x0
+	mv	s1, epc
+	la	a2, syscall2
+	sub	s1, a2
+	sw	s1, (a5)        // 0x0
+//
+//	mmu tests
+//
+
+//	map I/D sup pages 1:1
+	li	a0, 0x61	// V S I #0->0 
+	mv	mmu, a0
+	sw	a0, (a5)        // 0x61
+	li	a0, 0x23	// V S D W #0->0 
+	mv	mmu, a0
+	sw	a0, (a5)        // 0x23
+// turn on MMU
+xx:
+	mv	a0, csr
+	or	a0, 0x8
+	mv	csr, a0
+	sw	a0, (a5)        // 0xc
+
+
 	ebreak
 
 loc:	.word	0x99

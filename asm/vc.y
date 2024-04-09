@@ -1,4 +1,4 @@
-%token t_la t_lr t_value t_sp t_epc t_csr t_s0 t_s1 t_a0 t_a1 t_a2 t_a3 t_a4 t_a5 t_and t_or t_xor t_sub t_add t_mv t_nop t_inv t_ebreak t_jalr t_jr t_lw t_lb t_sw t_sb t_lea t_lui t_li t_beqz t_bnez t_bltz t_bgez t_j t_jal t_sll t_srl t_sra t_word t_byte t_name t_nl t_mul t_mulhi t_mmu t_addb t_addbu t_syscall t_stmp
+%token t_la t_lr t_value t_sp t_epc t_csr t_s0 t_s1 t_a0 t_a1 t_a2 t_a3 t_a4 t_a5 t_and t_or t_xor t_sub t_add t_mv t_nop t_inv t_ebreak t_jalr t_jr t_lw t_lb t_sw t_sb t_lea t_lui t_li t_beqz t_bnez t_bltz t_bgez t_j t_jal t_sll t_srl t_sra t_word t_byte t_name t_nl t_mul t_mulhi t_mmu t_addb t_addbu t_syscall t_stmp t_swapsp
 %start  program
 %%
 
@@ -44,11 +44,12 @@ rm:		t_s0 			{ $$ = 0; }
 ins:		t_and  rm ',' rm 	{ $$ = 0x8c61|($2<<7)|($4<<2); }      
 	|	t_or  rm ',' rm         { $$ = 0x8c41|($2<<7)|($4<<2); } 
 	|	t_mul  rm ',' rm        { $$ = 0x8c03|($2<<7)|($4<<2); } 
-	|	t_addb  rm ',' rm       { $$ = 0x8c23|($2<<7)|($4<<2); } 
-	|	t_addbu  rm ',' rm      { $$ = 0x8c43|($2<<7)|($4<<2); } 
+	|	t_addb  rm ',' rm       { $$ = 0x8c43|($2<<7)|($4<<2); } 
+	|	t_addbu  rm ',' rm      { $$ = 0x8c63|($2<<7)|($4<<2); } 
 	|	t_xor  rm ',' rm        { $$ = 0x8c21|($2<<7)|($4<<2); } 
 	|	t_sub  rm ',' rm        { $$ = 0x8c01|($2<<7)|($4<<2); } 
 	|	t_and  rm ',' exp	{ $$ = 0x8801|($2<<7)|imm6($4); }
+	|	t_or  rm ',' exp	{ $$ = 0x8803|($2<<7)|imm6($4); }
 	|	t_add  t_sp ',' exp 	{ $$ = 0x6101 | addsp($4); }
 	|	t_add  t_sp ',' r       { $$ = 0x8002|(2<<7)|($4<<2); } 
 	|	t_add  rm ',' exp	{ $$ = 0x0001|($2<<7)|imm8($4, 0); }
@@ -57,7 +58,8 @@ ins:		t_and  rm ',' rm 	{ $$ = 0x8c61|($2<<7)|($4<<2); }
 	|	t_mv   r ',' r        	{ $$ = 0x8002|($2<<7)|($4<<2); } 
 	|	t_nop  			{ $$ = 0x0001; }
 	|	t_inv  		 	{ $$ = 0x0003; }
-	|	t_syscall  		{ $$ = 0x0013; }
+	|	t_syscall  		{ $$ = 0x0017; }
+	|	t_swapsp  		{ $$ = 0x001b; }
 	|	t_ebreak  		{ $$ = 0x0007; }
 	|	t_jalr r  		{ $$ = 0x9002|($2<<7); }
 	|	t_jr r  		{ $$ = 0x8002|($2<<7); }
