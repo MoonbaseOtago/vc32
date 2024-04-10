@@ -268,13 +268,19 @@ syscall2:
 	li	a0, 0x23	// V S D W #0->0 
 	mv	mmu, a0
 	sw	a0, (a5)        // 0x23
+	lui	a0, 0x0300
+	li	a1, 0xffbf
+	zext	a1
+	or	a0, a1
+//	li      a0, 0x23|(7<<2)|0x0f80        // V S D W #0->0 
+	mv	mmu, a0
+	sw	a0, (a5)        // 0xfbf
 // turn on MMU
-xx:
 	mv	a0, csr
 	or	a0, 0x8
 	mv	csr, a0
+xx:
 	sw	a0, (a5)        // 0xc
-
 
 	ebreak
 

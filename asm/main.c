@@ -229,6 +229,8 @@ struct tab reserved[] = {
 	"swapsp", t_swapsp,
 	"addb", t_addb,
 	"addbu", t_addbu,
+	"sext", t_sext,
+	"zext", t_zext,
 	"mulhi", t_mulhi,
 	"mmu", t_mmu,
 	"mul", t_mul,
@@ -464,6 +466,20 @@ yylex(void)
 		yylval = sp->index;
 		return t_name;
 	} else {
+		if (c == '<') {
+			c = fgetc(fin);
+			if (c == '<')
+				return t_shl;
+			ungetc(c, fin);
+			c = '<';
+		} else
+		if (c == '>') {
+			c = fgetc(fin);
+			if (c == '>')
+				return t_shr;
+			ungetc(c, fin);
+			c = '>';
+		}
 		if (c == '/') {
 			c = fgetc(fin);
 			if (c == '/') {		

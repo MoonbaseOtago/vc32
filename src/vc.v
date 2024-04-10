@@ -1,6 +1,8 @@
 `define MULT 1
 //
 //	VC - minimal 32-bit C-only riscv - only has 8 regs
+//	(C) Paul Campbell Moonbase Otago 2023-2024
+//	All Rights Reserved
 //
 //	registers
 //		1 	- lr  *+
@@ -60,6 +62,8 @@
 //		C.MUL		r, r
 //		C.ADDB		r, r, r  sign extended
 //		C.ADDBU		r, r, r  0 extended
+//		C.SEXT
+//		C.ZEXT
 //		C.SYSCALL
 //		C.SWAPSP
 //
@@ -403,6 +407,9 @@ module decode(input clk, input reset,
 `endif
 								3'b0_10:	c_op = `OP_ADDB;
 								3'b0_11:	c_op = `OP_ADDBU;
+								//
+								3'b1_10:	begin c_op = `OP_ADDB; c_rs2 = 0; end	// sext
+								3'b1_11:	begin c_op = `OP_ADDBU; c_rs2 = 0; end	// zext
 								default:	c_trap = 1;
 								endcase
 							   end
@@ -504,7 +511,7 @@ module execute(input clk, input reset,
 	reg [RV-1:0]r1, r2, r1reg, r2reg;
 	reg [RV-1:0]r_8, r_9, r_10, r_11, r_12, r_13, r_14, r_15, r_stmp;
 	reg [RV-1:1]r_lr, r_sp, r_epc;
-	wire prev_sup_mode;
+	wire prev_supmode;
 `ifdef MULT
 	reg [2*RV-1:0]r_mult, c_mult;
 `endif
@@ -547,7 +554,7 @@ module execute(input clk, input reset,
 	4'b0000:	r1reg = 0;
 	4'b0001:	r1reg = {r_lr, 1'b0};
 	4'b0010:	r1reg = {r_sp, 1'b0};
-	4'b0011:	r1reg = {r_epc, prev_sup_mode}; 
+	4'b0011:	r1reg = {r_epc, prev_supmode}; 
 	4'b0100:	r1reg = csr;
 	4'b0101:	r1reg = mmu_read; 
 	4'b0110:	r1reg = r_stmp; 
@@ -591,7 +598,7 @@ module execute(input clk, input reset,
 	4'b0000:	r2reg = 0;
 	4'b0001:	r2reg = {r_lr, 1'b0};
 	4'b0010:	r2reg = {r_sp, 1'b0};
-	4'b0011:	r2reg = {r_epc, prev_sup_mode};
+	4'b0011:	r2reg = {r_epc, prev_supmode};
 	4'b0100:	r2reg = csr;
 	4'b0101:	r2reg = mmu_read; 
 	4'b0110:	r2reg = r_stmp; 
@@ -682,12 +689,11 @@ module execute(input clk, input reset,
 	end
 `endif
 	
-
 	always @(posedge clk)
 	if (!reset && ((valid && !((br|jmp)&!link) && !r_read_stall && !mult_stall) || mdone)) begin
 		r_wb_valid <= !(load&!r_read_stall || store);
 		r_wb_addr <= (reset ?0 : sys_trap||(interrupt&r_ie) ? 3 : store? 0 : rd);
-		r_wb <= link||sys_trap||(interrupt&r_ie)?{pc_plus_1, r_ie}: c_wb;
+		r_wb <= link||sys_trap||(interrupt&r_ie)?{pc_plus_1, supmode}: c_wb;
 		r_wdata <= (cond[0]? {(RV/8){r2reg[7:0]}}:r2reg);
 	end else
 	if (r_read_stall && rdone) begin
@@ -703,7 +709,7 @@ module execute(input clk, input reset,
 	4'b0001:	r_lr <= r_wb[RV-1:1];
 	4'b0010:	begin
 					r_sp <= r_wb[RV-1:1];
-					if (swapsp) r_stmp <= r_sp;
+					if (swapsp) r_stmp <= {r_sp, 1'b0};;
 				end
 	4'b0011:	if (sup_enabled) r_epc <= r_wb[RV-1:1];
 	//4'b0100: csr regs (not readable)
@@ -727,7 +733,7 @@ module execute(input clk, input reset,
 			assign sup_enabled = r_supmode;
 			assign supmode = r_supmode;
 			reg		r_prev_supmode, c_prev_supmode;
-			assign prev_sup_mode = r_prev_supmode;
+			assign prev_supmode = r_prev_supmode;
 			reg r_mmu_enable;
 			assign mmu_enable = r_mmu_enable;
 			reg r_mmu_i_proxy;
@@ -757,10 +763,7 @@ module execute(input clk, input reset,
 				if (reset) begin
 					c_prev_supmode = 1;
 				end else
-				if (valid && !r_read_stall && (sys_trap ||  interrupt&r_ie)) begin
-					c_prev_supmode = r_supmode;
-				end else
-				if (r_wb_valid && r_wb_addr == 4'b0011 && sup_enabled)
+				if (r_wb_valid && r_wb_addr == 4'b0011 && c_supmode)
 					c_prev_supmode = r_wb[0];
 			end
 
@@ -794,8 +797,8 @@ module execute(input clk, input reset,
 			assign mmu_trap = ((mmu_miss_fault|mmu_prot_fault)&r_read_stall) | ((mmu_miss_fault|mmu_prot_fault)&(|wmask));
 			assign mmu_fault = mmu_trap && valid && !r_read_stall;
 		end else begin
+			assign prev_supmode = 1;
 			assign sup_enabled = 1;
-			assign prev_sup_enabled = 0;
 			assign mmu_enable = 0;
 			assign mmu_trap = 0;
 			assign mmu_fault = 0;
@@ -928,7 +931,7 @@ module mmu(input clk,  input reset, input is_pc, input is_write, input mmu_enabl
 		r_vtop[reg_addr] <= reg_data[RV-1:RV-(PA-UNTOUCHED)];
 		r_valid[reg_addr] <= reg_data[0];
 		if (!reg_addr[$clog2(NMMU)+1])
-			r_writeable[reg_addr] <= reg_data[1];
+			r_writeable[reg_addr[$clog2(NMMU):0]] <= reg_data[1];
 	end
 	
 endmodule
@@ -969,7 +972,7 @@ module cpu(input clk, input reset_in,
 						.mmu_enable(mmu_enable),
 						.mmu_i_proxy(mmu_i_proxy),
 						.mmu_d_proxy(mmu_d_proxy),
-						.is_pc(~|rstrobe),
+						.is_pc(~|rstrobe && ~|wmask),
 						.is_write(|wmask),
 						.pcv(pc[VA-1:RV/16]),
 						.addrv(addr[VA-1:RV/16]),
