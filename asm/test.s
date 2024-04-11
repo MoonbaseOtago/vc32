@@ -282,6 +282,21 @@ syscall2:
 xx:
 	sw	a0, (a5)        // 0xc
 
+	li	a0, 0xffdf
+	sext	a0
+	sw	a0, (a5)        // 0xffdf
+	zext	a0
+	sw	a0, (a5)        // 0xdf
+	li	a0, 8
+	mv	sp, a0
+	li	a0, 16
+	mv	stmp, a0
+	swapsp
+	mv	a0, sp
+	sw	a0, (a5)        // 16
+	mv	a0, stmp
+	sw	a0, (a5)        // 8
+
 	ebreak
 
 loc:	.word	0x99

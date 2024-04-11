@@ -372,6 +372,7 @@ module decode(input clk, input reset,
 			endcase
 		2'b11:	casez (ins[15:13]) // synthesis full_case parallel_case
 			3'b000:	begin	//  
+						c_needs_rs2 = 1;
 						casez (ins[12:2]) // synthesis full_case parallel_case
 						11'b0??: begin				// trap instructions (use 01 for break)
 									c_sys_call = 0;
@@ -709,7 +710,7 @@ module execute(input clk, input reset,
 	4'b0001:	r_lr <= r_wb[RV-1:1];
 	4'b0010:	begin
 					r_sp <= r_wb[RV-1:1];
-					if (swapsp) r_stmp <= {r_sp, 1'b0};;
+					if (swapsp) r_stmp <= {r_sp, 1'b0};
 				end
 	4'b0011:	if (sup_enabled) r_epc <= r_wb[RV-1:1];
 	//4'b0100: csr regs (not readable)
