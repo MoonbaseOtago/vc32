@@ -177,16 +177,15 @@ int addsp(int v)
 
 int luioff(int v, int l)
 {
-	if (v&0xff) {
+	if (v&0xff || v&~0xffff) {
 		errs++;
-		fprintf(stderr, "%d: invalid constant (must be 256 byte aligned)\n", l?l:line);
+		fprintf(stderr, "%d: invalid constant (must be 256 byte aligned and 16 bits)\n", l?l:line);
 		return 0;
 	}
 	v>>=8;
-	if (v < -(1<<6) || v >= (1<<7) ) {
-		errs++;
-		fprintf(stderr, "%d: invalid constant (must be signed 7 bits)\n", l?l:line);
-		return 0;
+
+	if (((v>>7)&1) != ((v>>6)&1)) {
+		return 2|(((v&0x1f)<<2)| (((v>>5)&1)<<12) | (((v>>6)&1)<<11));
 	}
 	return (((v&0x1f)<<2)| (((v>>5)&1)<<12) | (((v>>6)&1)<<11));
 }

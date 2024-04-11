@@ -297,6 +297,13 @@ xx:
 	mv	a0, stmp
 	sw	a0, (a5)        // 8
 
+	lui	a0, 0xff00
+	sw	a0, (a5)        // ff00
+	lui	a0, 0x8000
+	sw	a0, (a5)        // 8000
+	lui	a0, 0x7f00
+	sw	a0, (a5)        // 7f00
+
 	ebreak
 
 loc:	.word	0x99

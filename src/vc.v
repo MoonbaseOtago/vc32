@@ -66,6 +66,7 @@
 //		C.ZEXT
 //		C.SYSCALL
 //		C.SWAPSP
+//		C.LUI		**  constant is 7 bits ~sext in 14:8
 //
 //	** extra bits
 //		
@@ -393,6 +394,13 @@ module decode(input clk, input reset,
 						default: c_trap = 1;
 						endcase
 				    end
+			3'b011:
+					begin				// lui ** - note inverted extension
+						c_op = `OP_ADD;
+						c_rd = {1'b1, ins[9:7]};
+						c_rs1 = 0;
+						c_imm = {{(RV-15){~ins[11]}}, ins[11],  ins[12], ins[6:2],8'b0};
+					end
 			3'b100:	begin
 						c_rd = {1'b1, ins[9:7]};
 						c_rs1 = {1'b1, ins[9:7]};
