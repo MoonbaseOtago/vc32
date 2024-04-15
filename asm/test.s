@@ -297,12 +297,37 @@ xx:
 	mv	a0, stmp
 	sw	a0, (a5)        // 8
 
-	lui	a0, 0xff00
+	lui	a0, 0xff00	// tests for the new lui
 	sw	a0, (a5)        // ff00
 	lui	a0, 0x8000
 	sw	a0, (a5)        // 8000
 	lui	a0, 0x7f00
 	sw	a0, (a5)        // 7f00
+
+	la	a0, loc
+	li	a1, 0x65
+	sb	a1, (a0)
+	lb	a2, (a0)	// ck that load/store work thru mmu
+	sw	a2, (a5)        // 0x65
+	
+
+	li	a1, 0x21	// V S D  #0->0 
+	mv	mmu, a1
+	sw	a1, (a5)        // 0x21
+	lb	a1, (a0)	// ck that load works thru mmu read only
+	sw	a1, (a5)        // 0x65
+
+	la	a1, mmu_vector
+	la	a2, wrt
+	sw	a2, (a1)
+	li	a1, 0x55
+	sb	a1, (a0)
+	sw	a1, (a5)        // this is to force a fail
+
+wrt:
+	li	a1, 0xffaa	// did we take a write trap?
+	sw	a1, (a5)        // 0xaa
+	
 
 	ebreak
 

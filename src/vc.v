@@ -803,8 +803,8 @@ module execute(input clk, input reset,
 			if (r_wb_valid && r_wb_addr == 4'b0100 && sup_enabled)
 				r_mmu_i_proxy <= r_wb[4];
 
-			assign mmu_trap = ((mmu_miss_fault|mmu_prot_fault)&r_read_stall) | ((mmu_miss_fault|mmu_prot_fault)&(|wmask));
-			assign mmu_fault = mmu_trap && valid && !r_read_stall;
+			assign mmu_trap = ((mmu_miss_fault)&r_read_stall) | ((mmu_miss_fault|mmu_prot_fault)&(|wmask));
+			assign mmu_fault = mmu_trap;
 		end else begin
 			assign prev_supmode = 1;
 			assign sup_enabled = 1;
