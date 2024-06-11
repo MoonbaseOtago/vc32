@@ -262,19 +262,29 @@ syscall2:
 //
 
 //	map I/D sup pages 1:1
-	li	a0, 0x61	// V S I #0->0 
+//
+//
+	li	a0, 0x60	// S I #0
 	mv	mmu, a0
-	sw	a0, (a5)        // 0x61
-	li	a0, 0x23	// V S D W #0->0 
+	li	a0, 0x3		// V ->0 
 	mv	mmu, a0
-	sw	a0, (a5)        // 0x23
+	sw	a0, (a5)        // 0x3 #0
+
+	li	a0, 0x20	// S D #0
+	mv	mmu, a0
+	li	a0, 0x07	// V W ->0 
+	mv	mmu, a0
+	sw	a0, (a5)        // 0x7
+
+	li	a0, 0x3e	// S D #f
+	mv	mmu, a0
+
 	lui	a0, 0x0300
-	li	a1, 0xffbf
+	li	a1, 0xffc7	// V W ->0xf
 	zext	a1
 	or	a0, a1
-//	li      a0, 0x23|(7<<2)|0x0f80        // V S D W #0->0 
 	mv	mmu, a0
-	sw	a0, (a5)        // 0xfbf
+	sw	a0, (a5)        // 0x3c7
 // turn on MMU
 	mv	a0, csr
 	or	a0, 0x8
@@ -311,6 +321,8 @@ xx:
 	sw	a2, (a5)        // 0x65
 	
 
+	li	a1, 0x20	// S D #0
+	mv	mmu, a1
 	li	a1, 0x21	// V S D  #0->0 
 	mv	mmu, a1
 	sw	a1, (a5)        // 0x21
@@ -321,12 +333,12 @@ xx:
 	la	a2, wrt
 	sw	a2, (a1)
 	li	a1, 0x55
-	sb	a1, (a0)
-	sw	a1, (a5)        // this is to force a fail
+uu1:	sb	a1, (a0)
+uuu:	sw	a1, (a5)        // this is to force a fail
 
 wrt:
 	li	a1, 0xffaa	// did we take a write trap?
-	sw	a1, (a5)        // 0xaa
+	sw	a1, (a5)        // 0xffaa
 	
 
 	ebreak

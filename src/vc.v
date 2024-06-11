@@ -491,12 +491,17 @@ module execute(input clk, input reset,
 		input			rdone,
 		input	[RV-1:0]rdata,
 
+		output		early_ifetch,
+		output [(RV/8)-1:0]early_rstrobe,
+		output [(RV/8)-1:0]early_wmask,
+		output [VA-1:VA-$clog2(NMMU)]early_pc,
+		output [VA-1:VA-$clog2(NMMU)]early_addr, 
+
 		output		mmu_reg_write,
 		output[RV-1:0]mmu_reg_data,
 		input[RV-1:0]mmu_read,
 		output		supmode,
 		output		mmu_enable,
-		output		mmu_fault,
 		output		mmu_i_proxy,
 		output		mmu_d_proxy,
 		input		mmu_miss_fault, mmu_prot_fault
@@ -504,14 +509,20 @@ module execute(input clk, input reset,
 	parameter RV=32;
 	parameter VA=RV;
 	parameter MMU = 0;
+	parameter NMMU = 8;
 
 	assign pc = r_pc[VA-1:1];
+	assign early_pc = r_pc[VA-1:VA-$clog2(NMMU)];
 	assign rstrobe = {r_read_stall&(~cond[0]|r_wb[0]), r_read_stall&(~cond[0]|~r_wb[0])};
+	assign early_rstrobe = {c_read_stall&(~cond[0]|c_wb[0]), c_read_stall&(~cond[0]|~c_wb[0])};
 	assign ifetch = r_fetch;
+	assign early_ifetch = c_fetch;
 	assign wdata = r_wdata;
 	assign addr = r_wb[VA-1:RV/16];
+	assign early_addr = c_wb[VA-1:VA-$clog2(NMMU)];
 	assign  wmask = r_wmask;
-	reg [(RV/8)-1:0]r_wmask;
+	assign  early_wmask = c_wmask;
+	reg [(RV/8)-1:0]r_wmask, c_wmask;
 	reg [RV-1:0]r_wdata;
 
 	wire link = ((br&&cond[2])||jmp)&cond[0];
@@ -632,16 +643,21 @@ module execute(input clk, input reset,
 `endif
 		;
 
-	reg r_read_stall;
+	reg r_read_stall, c_read_stall;
+	always @(*)
+		c_read_stall = reset ? 0 : valid && load ? 1 : r_read_stall&rdone ? 0 : r_read_stall;
 	always @(posedge clk)
-		r_read_stall <= reset ? 0 : valid && load ? 1 : r_read_stall&rdone ? 0 : r_read_stall;
+		r_read_stall <= c_read_stall;
 
 `ifdef MULT
 	wire mult_stall, mdone;
 `endif
-	reg r_fetch;
+	reg r_fetch, c_fetch;
+	
 	always @(posedge clk)
-		r_fetch <= reset ? 1 : (r_fetch ? !rdone : r_read_stall) ? rdone :
+		r_fetch <= c_fetch;
+	always @(*)
+		c_fetch = reset ? 1 : (r_fetch ? !rdone : r_read_stall) ? rdone :
 `ifdef MULT
 				mult_stall|r_mult_running ? mdone :
 `endif
@@ -804,13 +820,11 @@ module execute(input clk, input reset,
 				r_mmu_i_proxy <= r_wb[4];
 
 			assign mmu_trap = ((mmu_miss_fault)&r_read_stall) | ((mmu_miss_fault|mmu_prot_fault)&(|wmask));
-			assign mmu_fault = mmu_trap;
 		end else begin
 			assign prev_supmode = 1;
 			assign sup_enabled = 1;
 			assign mmu_enable = 0;
 			assign mmu_trap = 0;
-			assign mmu_fault = 0;
 		end
 	endgenerate
 
@@ -861,25 +875,31 @@ module execute(input clk, input reset,
 	generate
 		if (RV == 16) begin
 			wire [1:0]all_on = ~0;
-			always @(posedge clk) 
-				r_wmask <= reset||wdone ? 0 : |r_wmask? r_wmask : !valid||!store?0: !cond[0]? all_on: {c_wb[0], ~c_wb[0]};
+			always @(*) 
+				c_wmask = reset||wdone ? 0 : |r_wmask? r_wmask : !valid||!store?0: !cond[0]? all_on: {c_wb[0], ~c_wb[0]};
 		end else begin
 			wire [3:0]all_on = ~0;
-			always @(posedge clk) 
-				r_wmask <= reset||wdone?0:|r_wmask? r_wmask :!valid||!store?0: !cond[0]? all_on: {c_wb[1:0]==3, c_wb[1:0]==2, c_wb[1:0]==1, c_wb[1:0]==0};
+			always @(*) 
+				c_wmask = reset||wdone?0:|r_wmask? r_wmask :!valid||!store?0: !cond[0]? all_on: {c_wb[1:0]==3, c_wb[1:0]==2, c_wb[1:0]==1, c_wb[1:0]==0};
 		end
 	endgenerate
+	always @(posedge clk) 
+		r_wmask <= c_wmask;
 
 endmodule
 
 module mmu(input clk,  input reset, input is_pc, input is_write, input mmu_enable, input mmu_i_proxy, input mmu_d_proxy, input supmode,
+			input early_valid,
+			input early_is_pc,
+			input early_is_write,
+			input [VA-1:VA-$clog2(NMMU)]early_pcv,
+			input [VA-1:VA-$clog2(NMMU)]early_addrv, 
 			input [VA-1:RV/16]pcv,
 			input [VA-1:RV/16]addrv, 
 			output [PA-1:RV/16]addrp,
 			output		   mmu_miss_fault,
 			output		   mmu_prot_fault,
-			input reg_write, 
-			input		   mmu_fault,
+			input          reg_write, 
 			output[RV-1:0]reg_read,
 			input [RV-1:0]reg_data);
 
@@ -896,6 +916,7 @@ module mmu(input clk,  input reset, input is_pc, input is_write, input mmu_enabl
 	assign reg_read =  {r_fault_address, {(RV-(VA-UNTOUCHED)-3){1'b0}}, r_fault_ins, r_fault_write, r_fault_valid};
 
 	wire  [VA-1:RV/16]taddr = (!is_write&&is_pc? pcv: addrv);
+	wire  [VA-1:UNTOUCHED]early_taddr = (!early_is_write&&early_is_pc? early_pcv: early_addrv);
 
 	always @(posedge clk)
 	if (reset) begin
@@ -903,11 +924,11 @@ module mmu(input clk,  input reset, input is_pc, input is_write, input mmu_enabl
 		r_fault_write <= 0;
 		r_fault_ins <= 0;
 	end else
-	if (mmu_fault) begin
+	if (early_valid && (mmu_prot_fault|mmu_miss_fault)) begin
 		r_fault_valid <= !mmu_miss_fault;
-		r_fault_write <= is_write;
-		r_fault_ins <= is_pc;
-		r_fault_address <= taddr[VA-1: UNTOUCHED];
+		r_fault_write <= early_is_write;
+		r_fault_ins <= early_is_pc;
+		r_fault_address <= early_taddr[VA-1: UNTOUCHED];
 	end
 
 //
@@ -915,32 +936,41 @@ module mmu(input clk,  input reset, input is_pc, input is_write, input mmu_enabl
 //
 //	upper bits address
 //
+//  RV-1:3 - address
+//	2 - writeable
+//	1 - valid
+//	0 - 1
+
 //	6 - I=1, D=0
 //  5 - S-1, U=0
-//	4:2	address map
-//  1 - writeable
-//	0 - valid
+//	4:0	address map index
+//	0 - 0
 
 	reg [4*NMMU-1:0]r_valid;
 	reg [2*NMMU-1:0]r_writeable;
 	wire [$clog2(NMMU)+1:0]sel = {is_pc|(supmode&mmu_i_proxy), supmode&~mmu_d_proxy, taddr[VA-1:UNTOUCHED]};
+	wire [$clog2(NMMU)+1:0]early_sel = {early_is_pc|(supmode&mmu_i_proxy), supmode&~mmu_d_proxy, early_taddr[VA-1:UNTOUCHED]};
 
-	assign mmu_miss_fault = mmu_enable && !r_valid[sel];
-	assign mmu_prot_fault = mmu_enable && is_write && !r_writeable[sel[VA-UNTOUCHED:0]];
+	assign mmu_miss_fault = early_valid && mmu_enable && !r_valid[early_sel];
+	assign mmu_prot_fault = early_valid && mmu_enable && early_is_write && !r_writeable[early_sel[VA-UNTOUCHED:0]];
 	reg [PA-1:UNTOUCHED]r_vtop[0:4*NMMU-1];
 
 	assign addrp = {(mmu_enable ? r_vtop[sel]:{{PA-RV{1'b0}}, taddr[VA-1:UNTOUCHED]}), taddr[UNTOUCHED-1:RV/16]};
 
-	wire [$clog2(NMMU)+1:0]reg_addr = reg_data[$clog2(NMMU)+4-1:2];
+	reg [$clog2(NMMU)+2-1:0]r_reg_addr;
 	always @(posedge clk)
 	if (reset) begin
 		r_valid <= 0;
 	end else
 	if (reg_write) begin
-		r_vtop[reg_addr] <= reg_data[RV-1:RV-(PA-UNTOUCHED)];
-		r_valid[reg_addr] <= reg_data[0];
-		if (!reg_addr[$clog2(NMMU)+1])
-			r_writeable[reg_addr[$clog2(NMMU):0]] <= reg_data[1];
+		if (!reg_data[0]) begin
+			r_reg_addr <= reg_data[$clog2(NMMU)+2:1];
+		end else begin
+			r_vtop[r_reg_addr] <= reg_data[RV-1:RV-(PA-UNTOUCHED)];
+			r_valid[r_reg_addr] <= reg_data[1];
+			if (!r_reg_addr[$clog2(NMMU)+1])
+				r_writeable[r_reg_addr[$clog2(NMMU):0]] <= reg_data[2];
+		end
 	end
 	
 endmodule
@@ -969,9 +999,13 @@ module cpu(input clk, input reset_in,
 	wire[RV-1:0]mmu_read;
 	wire		supmode;
 	wire		mmu_enable;
-	wire		mmu_fault;
 	wire		mmu_i_proxy, mmu_d_proxy;
 	wire		mmu_miss_fault, mmu_prot_fault;
+	wire		early_ifetch;
+	wire [(RV/8)-1:0]early_rstrobe;
+	wire [(RV/8)-1:0]early_wmask;
+	wire [VA-1:VA-$clog2(NMMU)]early_pc;
+	wire [VA-1:VA-$clog2(NMMU)]early_addr; 
 	generate
 		if (MMU == 0) begin
 			assign addrp = |wmask||rstrobe?addr[VA-1:RV/16]:pc[VA-1:RV/16];
@@ -983,19 +1017,23 @@ module cpu(input clk, input reset_in,
 						.mmu_d_proxy(mmu_d_proxy),
 						.is_pc(~|rstrobe && ~|wmask),
 						.is_write(|wmask),
+						.early_valid(early_ifetch || |early_rstrobe || |early_wmask),
+						.early_is_pc(~|early_rstrobe && ~|early_wmask),
+						.early_is_write(|early_wmask),
+						.early_pcv(early_pc[VA-1:VA-$clog2(NMMU)]),
+						.early_addrv(early_addr[VA-1:VA-$clog2(NMMU)]),
 						.pcv(pc[VA-1:RV/16]),
 						.addrv(addr[VA-1:RV/16]),
 						.addrp(addrp),
 						.mmu_miss_fault(mmu_miss_fault),
 						.mmu_prot_fault(mmu_prot_fault),
-						.mmu_fault(mmu_fault),
 						.reg_write(mmu_reg_write),
 						.reg_data(mmu_reg_data),
 						.reg_read(mmu_read));
 		end
 	endgenerate
 	
-	assign rreq={RV/8{ifetch}}|rstrobe;
+	assign rreq = mmu_miss_fault || mmu_prot_fault ? 0 : ({RV/8{ifetch}}|rstrobe);
 
 	wire reset = reset_in;
 	//wire reset = r_reset;
@@ -1055,7 +1093,7 @@ module cpu(input clk, input reset_in,
 		.needs_rs2(needs_rs2), 
 		.imm(imm));
 
-	execute #(.VA(VA), .RV(RV), .MMU(MMU))ex(.clk(clk), .reset(reset),
+	execute #(.VA(VA), .RV(RV), .NMMU(NMMU), .MMU(MMU))ex(.clk(clk), .reset(reset),
 		.interrupt(interrupt),
 		.pc(pc),
 		.ifetch(ifetch),
@@ -1078,12 +1116,16 @@ module cpu(input clk, input reset_in,
 `ifdef MULT
 		.mult(mult),
 `endif
+		.early_ifetch(early_ifetch),
+		.early_rstrobe(early_rstrobe),
+		.early_wmask(early_wmask),
+		.early_pc(early_pc),
+		.early_addr(early_addr), 
 		.mmu_reg_write(mmu_reg_write),
 		.mmu_reg_data(mmu_reg_data),
 		.mmu_read(mmu_read),
 		.supmode(supmode),
 		.mmu_enable(mmu_enable),
-		.mmu_fault(mmu_fault),
 		.mmu_i_proxy(mmu_i_proxy),
 		.mmu_d_proxy(mmu_d_proxy),
 		.mmu_miss_fault(mmu_miss_fault),
