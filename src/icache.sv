@@ -39,9 +39,26 @@ module icache(input clk, input reset,
 			hit = valid && match;
 			tag = {r_tag[pindex], pindex};
 			pull = !hit;
-			rdata = r_data[pindex][RV*paddr[$clog2(LINE_LENGTH)-1:$clog2(RV/16)]-:RV];
 			c_offset = wstrobe_d? r_offset+1 : 0;
 		end
+
+		if (RV == 16) begin
+			if (LINE_LENGTH == 32) begin
+				always @(*)
+				if (paddr[0]) begin
+					rdata = r_data[pindex][31:16];
+				end else begin
+					rdata = r_data[pindex][15:0];
+				end
+			end else begin
+				always @(*)
+					rdata = 'bx;
+			end
+		end else begin
+			always @(*)
+				rdata = 'bx;
+		end
+
 
 		always @(posedge clk)
 			r_offset <= c_offset;

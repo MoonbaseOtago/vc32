@@ -47,13 +47,34 @@ module dcache(input clk, input reset,
 			tag = {r_tag[pindex], pindex};
 			push = write && valid && !match && dirty;
 			pull = !hit;
-			if (is_byte) begin
-				rdata = {{RV-8-1{8'bx}}, r_data[pindex][8*paddr[$clog2(LINE_LENGTH)-1:0]-:8]};
-			end else begin
-				rdata = r_data[pindex][RV*paddr[$clog2(LINE_LENGTH)-1:$clog2(RV/16)]-:RV];
-			end
 			dwrite = r_data[pindex][4*r_offset-:4];
 			c_offset = wstrobe_d|rstrobe_d ? r_offset+1 : 0;
+		end
+	
+		if (RV == 16) begin
+			if (LINE_LENGTH == 32) begin
+				always @(*)
+				if (is_byte) begin
+					case(paddr[1:0])
+					0: rdata = {8'bx, r_data[pindex][7:0]};
+					1: rdata = {8'bx, r_data[pindex][15:8]};
+					2: rdata = {8'bx, r_data[pindex][23:15]};
+					3: rdata = {8'bx, r_data[pindex][31:24]};
+					endcase
+				end else begin
+					if (paddr[0]) begin
+						rdata = r_data[pindex][31:16];
+					end else begin
+						rdata = r_data[pindex][15:0];
+					end
+				end
+			end else begin
+				always @(*)
+					rdata = 'bx;
+			end
+		end else begin
+			always @(*)
+				rdata = 'bx;
 		end
 
 		always @(posedge clk)

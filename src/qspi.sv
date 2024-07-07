@@ -165,12 +165,14 @@ module qspi(input clk, input reset,
 			   end
 			18:begin
 					c_state = 19;
-					c_count = {1'b0, r_read_delay[mem], 1'b0};
+					c_count = {2'b0, r_read_delay[mem], 1'b0};
 			   end
 			19:begin
-					if (r_count == mem) begin
+					if (r_count == 0) begin
 						c_count = 2*LINE_LENGTH;
 						c_state = 20;
+					end else begin
+						c_count = c_count - 1;
 					end
 					c_uio_oe = 2'b00;
 			   end
