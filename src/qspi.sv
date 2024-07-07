@@ -52,7 +52,7 @@ module qspi(input clk, input reset,
 		end
 
 		reg [4:0]r_state, c_state;
-		reg [3:0]r_count, c_count;
+		reg [4:0]r_count, c_count;
 
 		always @(posedge clk) begin
 			r_state <= (reset? 0:c_state);
@@ -165,7 +165,7 @@ module qspi(input clk, input reset,
 			   end
 			18:begin
 					c_state = 19;
-					c_count = {2'b0, r_read_delay[mem], 1'b0};
+					c_count = {r_read_delay[mem], 1'b0};
 			   end
 			19:begin
 					if (r_count == 0) begin

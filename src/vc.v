@@ -274,7 +274,7 @@ assign uio_oe[7:4]=0;
 
             .req((ifetch&i_pull)|((|rstrobe| |wmask)&(d_pull|d_push))),
             .i_d(ifetch),
-            .mem(ctag[PA-1:PA-8]=={(7){1'b1}}),  
+            .mem(ctag[PA-1:PA-8]=={8{1'b1}}),  
             .write(|wmask && d_push),
             .paddr(ctag),
 

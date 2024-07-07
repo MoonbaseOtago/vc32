@@ -104,8 +104,7 @@ module dcache(input clk, input reset,
 			for (N = 0; N < LINE_LENGTH*2; N=N+1) begin
 				always @(posedge clk)
 				if (pindex == L) 
-				if (write && hit &&
-							(is_byte ? paddr[$clog2(LINE_LENGTH)-1:0] : {paddr[$clog2(LINE_LENGTH)-1:1], 1'b0}) == (N/2)) begin
+				if (write && hit && r_offset == (2*LINE_LENGTH-1)) begin
 					casez ({is_byte, paddr[1:0]}) // synthesis full_case parallel_case
 					3'b1_?0: r_data[L][N*4+3:N*4] <= wdata[3:0];
 					3'b1_?1: r_data[L][N*4+3:N*4] <= wdata[7:4];
