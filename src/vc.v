@@ -86,6 +86,10 @@ module vc(input clk, input reset,
 	parameter MMU=1;
 	parameter NMMU=16;
 
+assign uo_out[7:2]=0;
+assign uio_out[7:4]=0;
+assign uio_oe[7:4]=0;
+
 	wire [ 1:0]rstrobe;
 	wire [(RV/8)-1:0]wmask;
 
@@ -142,14 +146,6 @@ module vc(input clk, input reset,
 `ifdef MULT
 	wire		 mult;
 `endif
-	generate 
-		if (RV == 16) begin
-			assign ins = rdata;
-		end else begin
-			assign ins = pc[1]?rdata[31:16]:rdata[15:0];
-		end
-	endgenerate
-
 	wire interrupt=0;
 	
 	wire rdone, wdone;
