@@ -97,11 +97,6 @@ module vc(input clk, input reset,
 	wire		mmu_enable;
 	wire		mmu_i_proxy, mmu_d_proxy;
 	wire		mmu_miss_fault, mmu_prot_fault;
-	wire		early_ifetch;
-	wire [(RV/8)-1:0]early_rstrobe;
-	wire [(RV/8)-1:0]early_wmask;
-	wire [VA-1:VA-$clog2(NMMU)]early_pc;
-	wire [VA-1:VA-$clog2(NMMU)]early_addr; 
 	generate
 		if (MMU == 0) begin
 			assign addrp = |wmask|| |rstrobe?addr[VA-1:RV/16]:pc[VA-1:RV/16];
@@ -113,11 +108,6 @@ module vc(input clk, input reset,
 						.mmu_d_proxy(mmu_d_proxy),
 						.is_pc(~|rstrobe && ~|wmask),
 						.is_write(|wmask),
-						.early_valid(early_ifetch || |early_rstrobe || |early_wmask),
-						.early_is_pc(~|early_rstrobe && ~|early_wmask),
-						.early_is_write(|early_wmask),
-						.early_pcv(early_pc[VA-1:VA-$clog2(NMMU)]),
-						.early_addrv(early_addr[VA-1:VA-$clog2(NMMU)]),
 						.pcv(pc[VA-1:RV/16]),
 						.addrv(addr[VA-1:RV/16]),
 						.addrp(addrp),
@@ -209,11 +199,6 @@ module vc(input clk, input reset,
 `ifdef MULT
 		.mult(mult),
 `endif
-		.early_ifetch(early_ifetch),
-		.early_rstrobe(early_rstrobe),
-		.early_wmask(early_wmask),
-		.early_pc(early_pc),
-		.early_addr(early_addr), 
 		.mmu_reg_write(mmu_reg_write),
 		.mmu_reg_data(mmu_reg_data),
 		.mmu_read(mmu_read),
