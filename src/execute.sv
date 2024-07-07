@@ -58,6 +58,7 @@ module execute(input clk, input reset,
 	parameter RV=32;
 	parameter VA=RV;
 	parameter MMU = 0;
+	parameter NMMU = 16;
 
 	assign pc = r_pc[VA-1:1];
 	assign rstrobe = {r_read_stall&(~cond[0]|r_wb[0]), r_read_stall&(~cond[0]|~r_wb[0])};

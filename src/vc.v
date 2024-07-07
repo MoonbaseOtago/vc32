@@ -97,6 +97,7 @@ module vc(input clk, input reset,
 	wire		mmu_enable;
 	wire		mmu_i_proxy, mmu_d_proxy;
 	wire		mmu_miss_fault, mmu_prot_fault;
+	wire		mmu_fault;
 	generate
 		if (MMU == 0) begin
 			assign addrp = |wmask|| |rstrobe?addr[VA-1:RV/16]:pc[VA-1:RV/16];
@@ -113,6 +114,7 @@ module vc(input clk, input reset,
 						.addrp(addrp),
 						.mmu_miss_fault(mmu_miss_fault),
 						.mmu_prot_fault(mmu_prot_fault),
+						.mmu_fault(mmu_fault),
 						.reg_write(mmu_reg_write),
 						.reg_data(mmu_reg_data),
 						.reg_read(mmu_read));
@@ -208,6 +210,7 @@ module vc(input clk, input reset,
 		.mmu_d_proxy(mmu_d_proxy),
 		.mmu_miss_fault(mmu_miss_fault),
 		.mmu_prot_fault(mmu_prot_fault),
+		.mmu_fault(mmu_fault),
 		.op(op),
 		.rs1(rs1),
 		.rs2(rs2),
