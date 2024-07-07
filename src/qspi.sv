@@ -110,9 +110,9 @@ module qspi(input clk, input reset,
 						c_state = 9;
 					end
 					if (write) begin
-						c_uio_out = {3'bxxx, const_38[r_count]};
+						c_uio_out = {3'bxxx, const_38[r_count[2:0]]};
 					end else begin
-						c_uio_out = {3'bxxx, const_eb[r_count]};
+						c_uio_out = {3'bxxx, const_eb[r_count[2:0]]};
 					end
 					c_count = r_count-1;
 			   end
@@ -165,7 +165,7 @@ module qspi(input clk, input reset,
 			   end
 			18:begin
 					c_state = 19;
-					c_count = {r_read_delay[mem], 1'b0};
+					c_count = {1'b0, r_read_delay[mem], 1'b0};
 			   end
 			19:begin
 					if (r_count == mem) begin
@@ -196,7 +196,7 @@ module qspi(input clk, input reset,
 						c_state = 22;
 					end
 					c_count = r_count-1;
-					c_uio_out = {3'bxxx, const_35[r_count]};
+					c_uio_out = {3'bxxx, const_35[r_count[2:0]]};
 			   end
 		    22:begin
 					c_state = 31;

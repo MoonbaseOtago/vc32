@@ -229,7 +229,7 @@ module vc(input clk, input reset,
 	wire d_rstrobe_d, d_wstrobe_d, i_wstrobe_d;
 	wire [PA-1:$clog2(LINE_LENGTH)]d_tag, i_tag;
 	wire [3:0]dwrite;
-	wire [PA-1:0]phys_addr = {addrp, |wmask|| |rstrobe? addr[$clog2(LINE_LENGTH)-1:0]: {pc[$clog2(LINE_LENGTH)-1],1'bx}};
+	wire [PA-1:0]phys_addr = {addrp, |wmask|| |rstrobe? addr[$clog2(LINE_LENGTH)-1:RV/16]: pc[$clog2(LINE_LENGTH)-1:RV/16]};
 
 	assign rdone = d_hit && |rstrobe && !(fault|d_pull|d_push);
 	assign wdone = d_hit && |wmask && !(fault|d_pull|d_push);
