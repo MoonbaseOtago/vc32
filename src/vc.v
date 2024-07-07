@@ -125,6 +125,7 @@ assign uio_oe[7:4]=0;
 		end
 	endgenerate
 
+	wire		fault;
 	wire		jmp;
 	wire		br; 
 	wire   [2:0]cond;
@@ -207,6 +208,7 @@ assign uio_oe[7:4]=0;
 		.mmu_miss_fault(mmu_miss_fault),
 		.mmu_prot_fault(mmu_prot_fault),
 		.mmu_fault(mmu_fault),
+		.fault(fault),
 		.op(op),
 		.rs1(rs1),
 		.rs2(rs2),
@@ -219,7 +221,6 @@ assign uio_oe[7:4]=0;
 	parameter I_NLINES=4;  // cache line length (in bytes)
 	parameter D_NLINES=4;  // cache line length (in bytes)
 
-	wire d_is_byte, d_write, fault;
 	wire i_hit, i_pull;
 	wire d_hit, d_push, d_pull;
 	wire d_rstrobe_d, d_wstrobe_d, i_wstrobe_d;
@@ -245,8 +246,8 @@ assign uio_oe[7:4]=0;
 
 	dcache #(.PA(PA), .LINE_LENGTH(LINE_LENGTH), .RV(RV), .NLINES(D_NLINES))dcache(.clk(clk), .reset(reset),
 		.paddr(phys_addr),
-		.is_byte(d_write),
-		.write(d_write),
+		.is_byte(|wmask && ~wmask != 0),
+		.write(|wmask),
 		.fault(fault),
 		.wdata(wdata),
 

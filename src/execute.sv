@@ -44,6 +44,7 @@ module execute(input clk, input reset,
 		output			ifetch,	
 		input			rdone,
 		input	[RV-1:0]rdata,
+		output		    fault,
 
 		output		mmu_reg_write,
 		output[RV-1:0]mmu_reg_data,
@@ -82,6 +83,8 @@ module execute(input clk, input reset,
 
 	wire	mmu_trap;
 	wire  sys_trap = trap|mmu_trap;
+
+	assign fault = sys_trap|(interrupt&r_ie?sup_enabled:1'b0);
 
 	generate 
 
