@@ -95,9 +95,13 @@ module vc(input clk, input reset,
 	wire[RV-1:0]mmu_read;
 	wire		supmode;
 	wire		mmu_enable;
-	wire		mmu_fault;
 	wire		mmu_i_proxy, mmu_d_proxy;
 	wire		mmu_miss_fault, mmu_prot_fault;
+	wire		early_ifetch;
+	wire [(RV/8)-1:0]early_rstrobe;
+	wire [(RV/8)-1:0]early_wmask;
+	wire [VA-1:VA-$clog2(NMMU)]early_pc;
+	wire [VA-1:VA-$clog2(NMMU)]early_addr; 
 	generate
 		if (MMU == 0) begin
 			assign addrp = |wmask|| |rstrobe?addr[VA-1:RV/16]:pc[VA-1:RV/16];
@@ -109,19 +113,21 @@ module vc(input clk, input reset,
 						.mmu_d_proxy(mmu_d_proxy),
 						.is_pc(~|rstrobe && ~|wmask),
 						.is_write(|wmask),
+						.early_valid(early_ifetch || |early_rstrobe || |early_wmask),
+						.early_is_pc(~|early_rstrobe && ~|early_wmask),
+						.early_is_write(|early_wmask),
+						.early_pcv(early_pc[VA-1:VA-$clog2(NMMU)]),
+						.early_addrv(early_addr[VA-1:VA-$clog2(NMMU)]),
 						.pcv(pc[VA-1:RV/16]),
 						.addrv(addr[VA-1:RV/16]),
 						.addrp(addrp),
 						.mmu_miss_fault(mmu_miss_fault),
 						.mmu_prot_fault(mmu_prot_fault),
-						.mmu_fault(mmu_fault),
 						.reg_write(mmu_reg_write),
 						.reg_data(mmu_reg_data),
 						.reg_read(mmu_read));
 		end
 	endgenerate
-	
-
 
 	wire		jmp;
 	wire		br; 
@@ -180,7 +186,7 @@ module vc(input clk, input reset,
 		.needs_rs2(needs_rs2), 
 		.imm(imm));
 
-	execute #(.VA(VA), .RV(RV), .MMU(MMU))ex(.clk(clk), .reset(reset),
+	execute #(.VA(VA), .RV(RV), .NMMU(NMMU), .MMU(MMU))ex(.clk(clk), .reset(reset),
 		.interrupt(interrupt),
 		.pc(pc),
 		.ifetch(ifetch),
@@ -203,12 +209,16 @@ module vc(input clk, input reset,
 `ifdef MULT
 		.mult(mult),
 `endif
+		.early_ifetch(early_ifetch),
+		.early_rstrobe(early_rstrobe),
+		.early_wmask(early_wmask),
+		.early_pc(early_pc),
+		.early_addr(early_addr), 
 		.mmu_reg_write(mmu_reg_write),
 		.mmu_reg_data(mmu_reg_data),
 		.mmu_read(mmu_read),
 		.supmode(supmode),
 		.mmu_enable(mmu_enable),
-		.mmu_fault(mmu_fault),
 		.mmu_i_proxy(mmu_i_proxy),
 		.mmu_d_proxy(mmu_d_proxy),
 		.mmu_miss_fault(mmu_miss_fault),
