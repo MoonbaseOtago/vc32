@@ -44,7 +44,7 @@ module dcache(input clk, input reset,
 			valid = r_valid[pindex];
 			dirty = r_dirty[pindex];
 			hit = valid && match;
-			tag = {r_tag[pindex], pindex};
+			tag = {pull?ptag:r_tag[pindex], pindex};
 			push = write && valid && !match && dirty;
 			pull = !hit;
 			dwrite = r_data[pindex][4*r_offset-:4];
@@ -68,13 +68,7 @@ module dcache(input clk, input reset,
 						rdata = r_data[pindex][15:0];
 					end
 				end
-			end else begin
-				always @(*)
-					rdata = 'bx;
 			end
-		end else begin
-			always @(*)
-				rdata = 'bx;
 		end
 
 		always @(posedge clk)

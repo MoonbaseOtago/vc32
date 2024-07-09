@@ -37,7 +37,7 @@ module icache(input clk, input reset,
 			match = r_tag[pindex] == ptag;
 			valid = r_valid[pindex];
 			hit = valid && match;
-			tag = {r_tag[pindex], pindex};
+			tag = {ptag, pindex};
 			pull = !hit;
 			c_offset = wstrobe_d? r_offset+1 : 0;
 		end
@@ -50,13 +50,7 @@ module icache(input clk, input reset,
 				end else begin
 					rdata = r_data[pindex][15:0];
 				end
-			end else begin
-				always @(*)
-					rdata = 'bx;
 			end
-		end else begin
-			always @(*)
-				rdata = 'bx;
 		end
 
 

@@ -27,6 +27,8 @@ module tb ();
     wire [7:0] uio_out;
     wire [7:0] uio_oe;
 
+    wire [3:0]b;
+
     tt_um_vc32_cpu tt_um_vc32_cpu (
     // include power ports for the Gate Level test
     `ifdef GL_TEST
@@ -35,7 +37,7 @@ module tb ();
     `endif
         .ui_in      (ui_in),    // Dedicated inputs
         .uo_out     (uo_out),   // Dedicated outputs
-        .uio_in     (uio_in),   // IOs: Input path
+        .uio_in     ({4'b0, b}),   // IOs: Input path
         .uio_out    (uio_out),  // IOs: Output path
         .uio_oe     (uio_oe),   // IOs: Enable path (active high: 0=input, 1=output)
         .ena        (ena),      // enable - goes high when design is selected
@@ -43,43 +45,25 @@ module tb ();
         .rst_n      (rst_n)     // not reset
         );
 
-	reg [7:0]m[0:4096];
+	assign b[0] = uio_oe[0]?uio_out[0]:1'bz;
+	assign b[1] = uio_oe[1]?uio_out[1]:1'bz;
+	assign b[2] = uio_oe[2]?uio_out[2]:1'bz;
+	assign b[3] = uio_oe[3]?uio_out[3]:1'bz;
 
-	initial begin
-`include "./init.v"
-	end
 
-	wire ind = uio_out[0];
-	wire write = uio_out[1];
-	wire latch_hi = uio_out[2];
-	wire latch_lo = uio_out[3];
-	assign uio_in[7] = 0; // interrupt
+	spiflash #(.FILENAME(""))ram(.csb(uo_out[1]),
+			           .clk(uo_out[2]),
+				   .io0(b[0]),
+				   .io1(b[1]),
+				   .io2(b[2]),
+				   .io3(b[3]));
 
-	reg [21:16]addrhi;
-	reg [15:8]addrmed;
-	reg [7:1]addrlo;
-
-	assign ui_in = m[{addrhi, addrmed, addrlo, ind}];
-
-	always @(negedge clk)
-	if (latch_hi&&!latch_lo) 
-		addrhi <= uo_out;
-	always @(negedge clk)
-	if (latch_lo&&latch_hi) 
-		addrmed <= uo_out;
-	always @(negedge clk)
-	if (latch_lo&&!latch_hi) 
-		addrlo <= uo_out[7:1];
-	always @(posedge clk)
-	if (write && (addrhi!=6'h0 || addrmed!=8'hff || addrlo != 7'h7f)) 
-		m[{addrhi, addrmed, addrlo, ind}] <= uo_out;
-
-	wire log = write && addrhi==6'h0 && addrmed == 8'hff && addrlo == 7'h7f && ind;
-    	reg [7:0]byte0;
-    	always @(posedge clk)
-    	if (write &&  addrhi== 6'b0 && addrmed==8'hff && addrlo == 7'h7f && !ind)
-		byte0 <= uo_out;
-	wire [15:0]log_out = {uo_out, byte0};
+	spiflash #(.FILENAME("init.hex"))rom(.csb(uo_out[0]),
+			           .clk(uo_out[2]),
+				   .io0(b[0]),
+				   .io1(b[1]),
+				   .io2(b[2]),
+				   .io3(b[3]));
 
 
 `ifdef XTEST

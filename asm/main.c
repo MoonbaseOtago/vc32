@@ -496,7 +496,7 @@ yylex(void)
 int
 main(int argc, char **argv)
 {
-	int i, src_out=0,dump_symbols=0;
+	int i, hex_out=0,src_out=0,dump_symbols=0;
 	struct reloc *rp;
 	char *in_name = 0;
 	char *out_name = "a.out";
@@ -508,6 +508,9 @@ main(int argc, char **argv)
 		} else
 		if (strcmp(argv[i], "-m") == 0) {
 			dump_symbols = 1;
+		} else
+		if (strcmp(argv[i], "-h") == 0) {
+			hex_out = 1;
 		} else
 		if (strcmp(argv[i], "-s") == 0) {
 			src_out = 1;
@@ -600,8 +603,21 @@ main(int argc, char **argv)
 		assert(found);
 	}
 	if (!errs) {
+		if (hex_out) {
+			FILE *fout = fopen(out_name, "w");
+			if (fout) {
+				for (i = 0; i < pc; i++) {
+					fprintf(fout, "%02x ", code[i]&0xff);
+					fprintf(fout, "%02x\n", (code[i]>>8)&0xff);	
+				}
+				fclose(fout);
+			} else {
+				fprintf(stderr, "Can't open output file '%s'\n", out_name);
+				errs++;
+			}
+		} else
 		if (src_out) {
-			FILE *fout = fopen(out_name, "wb");
+			FILE *fout = fopen(out_name, "w");
 			if (fout) {
 				for (i = 0; i < pc; i++) {
 					fprintf(fout, "	m[16'h%02x] = 8'h%02x;\n", i*2, code[i]&0xff);
@@ -613,7 +629,7 @@ main(int argc, char **argv)
 				errs++;
 			}
 		} else {
-			FILE *fout = fopen(out_name, "w");
+			FILE *fout = fopen(out_name, "wb");
 			if (fout) {
 				fwrite(code, 1, pc*2, fout);	
 				fclose(fout);

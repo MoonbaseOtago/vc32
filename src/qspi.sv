@@ -55,7 +55,7 @@ module qspi(input clk, input reset,
 		reg [4:0]r_count, c_count;
 
 		always @(posedge clk) begin
-			r_state <= (reset? 0:c_state);
+			r_state <= (reset? 31:c_state);
 			r_cs <= (reset? 2'b11:c_cs);	
 			r_uio_out <= c_uio_out;
 			r_uio_oe <= (reset?0:c_uio_oe);
