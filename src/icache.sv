@@ -43,7 +43,7 @@ module icache(input clk, input reset,
 		end
 
 		if (RV == 16) begin
-			if (LINE_LENGTH == 32) begin
+			if (LINE_LENGTH == 4) begin
 				always @(*)
 				if (paddr[0]) begin
 					rdata = r_data[pindex][31:16];

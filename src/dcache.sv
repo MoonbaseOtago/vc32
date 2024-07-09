@@ -52,7 +52,7 @@ module dcache(input clk, input reset,
 		end
 	
 		if (RV == 16) begin
-			if (LINE_LENGTH == 32) begin
+			if (LINE_LENGTH == 4) begin
 				always @(*)
 				if (is_byte) begin
 					case(paddr[1:0])
