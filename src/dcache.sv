@@ -44,9 +44,9 @@ module dcache(input clk, input reset,
 			valid = r_valid[pindex];
 			dirty = r_dirty[pindex];
 			hit = valid && match;
+			pull = !hit;
 			tag = {pull?ptag:r_tag[pindex], pindex};
 			push = write && valid && !match && dirty;
-			pull = !hit;
 			dwrite = r_data[pindex][4*r_offset-:4];
 			c_offset = wstrobe_d|rstrobe_d ? r_offset+1 : 0;
 		end
