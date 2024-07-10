@@ -58,7 +58,7 @@ module dcache(input clk, input reset,
 					case(paddr[1:0])
 					0: rdata = {8'bx, r_data[pindex][7:0]};
 					1: rdata = {8'bx, r_data[pindex][15:8]};
-					2: rdata = {8'bx, r_data[pindex][23:15]};
+					2: rdata = {8'bx, r_data[pindex][23:16]};
 					3: rdata = {8'bx, r_data[pindex][31:24]};
 					endcase
 				end else begin

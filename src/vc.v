@@ -290,7 +290,7 @@ assign uio_oe[7:4]=0;
             .dwrite(dwrite),
             .rstrobe_d(d_rstrobe_d),
 
-            .reg_addr(addr[3:0]),
+            .reg_addr(addr[4:1]),
             .reg_data(wdata[7:0]),
             .reg_write(|wmask&&io_access&&(addr[7:4]==0)));
 

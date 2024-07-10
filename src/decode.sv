@@ -336,7 +336,7 @@ module decode(input clk, input reset,
 						c_op = `OP_ADD;
 						c_rs2 = {1'b1, ins[4:2]};
 						c_rs1 = {1'b1, ins[9:7]};
-						c_imm = {{(RV-8){1'b0}}, ins[11:10],ins[6], 1'b0};
+						c_imm = {{(RV-4){1'b0}}, ins[11:10],ins[6], 1'b0};
 					end
 			3'b010: begin 	// lwio
 						c_load = 1;
@@ -344,7 +344,7 @@ module decode(input clk, input reset,
 						c_cond = 3'bxx0;
 						c_rd = {1'b1, ins[4:2]};
 						c_rs1 = {1'b1, ins[9:7]};
-						c_imm = {{(RV-8){1'b0}}, ins[11:10],ins[6], 1'b0};
+						c_imm = {{(RV-4){1'b0}}, ins[11:10],ins[6], 1'b0};
 				    end
 			3'b011:
 					begin				// lui ** - note inverted extension
@@ -401,6 +401,7 @@ module decode(input clk, input reset,
 		r_imm <= c_imm;
 		r_store <= c_store;
 		r_load <= c_load;
+		r_io <= c_io;
 `ifdef MULT
 		r_mult <= c_mult;
 `endif
