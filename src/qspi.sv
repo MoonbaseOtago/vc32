@@ -34,6 +34,7 @@ module qspi(input clk, input reset,
 	reg		[1:0]r_cs, c_cs;	
 	reg		[3:0]r_uio_out, c_uio_out;
 	reg		[1:0]r_uio_oe, c_uio_oe;
+	reg			 r_ind, c_ind;
 	assign cs = r_cs;
 	assign	uio_oe = {r_uio_oe[1], r_uio_oe[1], r_uio_oe};
 	assign	uio_out = r_uio_out;
@@ -55,18 +56,21 @@ module qspi(input clk, input reset,
 		reg [4:0]r_count, c_count;
 
 		always @(posedge clk) begin
-			r_state <= (reset? 31:c_state);
+			r_state <= (reset? 0:c_state);
 			r_cs <= (reset? 2'b11:c_cs);	
 			r_uio_out <= c_uio_out;
 			r_uio_oe <= (reset?0:c_uio_oe);
 			r_count <= c_count;
+			r_ind <= reset?0:c_ind;
 		end
 
 		wire [6:0]const_38 = 7'h38;
 		wire [6:0]const_eb = 7'h6b;
 		wire [6:0]const_35 = 7'h35;
+		wire [6:0]const_ab = 7'h2b;
 
 		always @(*) begin
+			c_ind = r_ind;
 			c_state = r_state;
 			c_uio_oe = r_uio_oe;
 			c_uio_out = r_uio_out;
@@ -187,9 +191,9 @@ module qspi(input clk, input reset,
 			   end
 
 			0: begin
-					c_cs = 2'b10;	// send 35 to 0 to go into quad mode
+					c_cs = r_ind? 2'b10: 2'b00;	// send ab to power up then optionally 35 to 0 to go into quad mode
 					c_uio_oe = 2'b01;
-					c_uio_out = 4'bxxx0;
+					c_uio_out = {3'bxxx, ~r_ind};
 					c_count = 6;
 					c_state = 21;
 			   end
@@ -198,10 +202,11 @@ module qspi(input clk, input reset,
 						c_state = 22;
 					end
 					c_count = r_count-1;
-					c_uio_out = {3'bxxx, const_35[r_count[2:0]]};
+					c_uio_out = {3'bxxx, (r_ind?const_35[r_count[2:0]]:const_ab[r_count[2:0]])};
 			   end
 		    22:begin
-					c_state = 31;
+					c_state = (r_ind?31:0);
+					c_ind = 1;
 					c_uio_oe = 2'b00;
 					c_cs = 2'b11;
 			   end

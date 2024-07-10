@@ -29,6 +29,7 @@ module decode(input clk, input reset,
 		output swapsp,
 		output load,
 		output store, 
+		output io, 
 `ifdef MULT
 		output mult,
 `endif
@@ -46,6 +47,7 @@ module decode(input clk, input reset,
 	reg		r_sys_call, c_sys_call; assign sys_call = r_sys_call;
 	reg		r_swapsp, c_swapsp; assign swapsp = r_swapsp;
 	reg		r_load, c_load; assign load = r_load;
+	reg		r_io, c_io; assign io = r_io;
 	reg		r_store, c_store; assign store = r_store;
 	reg[2:0]r_cond, c_cond; assign cond = r_cond;
 	reg		r_jmp, c_jmp; assign jmp = r_jmp;
@@ -63,6 +65,7 @@ module decode(input clk, input reset,
 	always @(*) begin
 		c_trap = 0;
 		c_load = 0;
+		c_io = 0;
 		c_store = 0;
 		c_cond = 3'bx;
 		c_needs_rs2 = 0;
@@ -325,6 +328,23 @@ module decode(input clk, input reset,
 								 end
 						default: c_trap = 1;
 						endcase
+				    end
+			3'b001: begin 	// swio
+						c_store = 1;
+						c_io = 1;
+						c_cond = 3'bxx0;
+						c_op = `OP_ADD;
+						c_rs2 = {1'b1, ins[4:2]};
+						c_rs1 = {1'b1, ins[9:7]};
+						c_imm = {{(RV-8){1'b0}}, ins[11:10],ins[6], 1'b0};
+					end
+			3'b010: begin 	// lwio
+						c_load = 1;
+						c_op = `OP_ADD;
+						c_cond = 3'bxx0;
+						c_rd = {1'b1, ins[4:2]};
+						c_rs1 = {1'b1, ins[9:7]};
+						c_imm = {{(RV-8){1'b0}}, ins[11:10],ins[6], 1'b0};
 				    end
 			3'b011:
 					begin				// lui ** - note inverted extension

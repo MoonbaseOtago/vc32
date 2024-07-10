@@ -86,7 +86,8 @@ module vc(input clk, input reset,
 	parameter MMU=1;
 	parameter NMMU=16;
 
-assign uo_out[7:2]=0;
+	assign uo_out[2] = clk;
+assign uo_out[7:3]=0;
 assign uio_out[7:4]=0;
 assign uio_oe[7:4]=0;
 
@@ -98,6 +99,7 @@ assign uio_oe[7:4]=0;
 	wire[RV-1:0]mmu_reg_data;
 	wire[RV-1:0]mmu_read;
 	wire		supmode;
+	wire		rom_enable;
 	wire		mmu_enable;
 	wire		mmu_i_proxy, mmu_d_proxy;
 	wire		mmu_miss_fault, mmu_prot_fault;
@@ -134,6 +136,7 @@ assign uio_oe[7:4]=0;
 	wire		swapsp;
 	wire		load;
 	wire		store; 
+	wire		io; 
 	wire   [3:0]op;
 	wire   [3:0]rs1, rs2, rd;
 	wire		needs_rs2; 
@@ -149,8 +152,11 @@ assign uio_oe[7:4]=0;
 `endif
 	wire interrupt=0;
 	
+	wire		io_access; 
+	wire io_rdone=1, io_wdone=1;
 	wire rdone, wdone;
 	wire [RV-1:0]rdata, wdata;
+	wire [RV-1:0]io_rdata=0;
 
 	decode #(.RV(RV))dec(.clk(clk), .reset(reset),
 		.supmode(supmode),
@@ -165,6 +171,7 @@ assign uio_oe[7:4]=0;
 		.swapsp(swapsp),
 		.load(load),
 		.store(store), 
+		.io(io),
 `ifdef MULT
 		.mult(mult),
 `endif
@@ -181,12 +188,13 @@ assign uio_oe[7:4]=0;
 		.ifetch(ifetch),
 		.iready(iready),
 		.rstrobe(rstrobe),
-		.rdone(rdone),
+		.rdone(io_access?io_rdone:rdone),
 		.wmask(wmask),
-		.wdone(wdone),
+		.wdone(io_access?io_wdone:wdone),
+		.io_access(io_access),
 		.addr(addr),
 		.wdata(wdata),
-		.rdata(rdata),
+		.rdata(io_access?io_rdata:rdata),
 		.jmp(jmp),
 		.br(br),
 		.cond(cond),
@@ -195,6 +203,7 @@ assign uio_oe[7:4]=0;
 		.swapsp(swapsp),
 		.load(load),
 		.store(store), 
+		.io(io),
 `ifdef MULT
 		.mult(mult),
 `endif
@@ -208,6 +217,7 @@ assign uio_oe[7:4]=0;
 		.mmu_miss_fault(mmu_miss_fault),
 		.mmu_prot_fault(mmu_prot_fault),
 		.mmu_fault(mmu_fault),
+		.rom_enable(rom_enable),
 		.fault(fault),
 		.op(op),
 		.rs1(rs1),
@@ -233,7 +243,7 @@ assign uio_oe[7:4]=0;
 
 
 	icache #(.PA(PA), .LINE_LENGTH(LINE_LENGTH), .RV(RV), .NLINES(I_NLINES))icache(.clk(clk), .reset(reset),
-		.paddr(phys_addr),
+		.paddr(phys_addr[PA-1:1]),
 		.fault(fault),
 
 		.dread(uio_in[3:0]),	
@@ -247,7 +257,7 @@ assign uio_oe[7:4]=0;
 	dcache #(.PA(PA), .LINE_LENGTH(LINE_LENGTH), .RV(RV), .NLINES(D_NLINES))dcache(.clk(clk), .reset(reset),
 		.paddr(phys_addr),
 		.is_byte(|wmask && ~wmask != 0),
-		.write(|wmask),
+		.write(|wmask && !io_access),
 		.fault(fault),
 		.wdata(wdata),
 
@@ -264,17 +274,14 @@ assign uio_oe[7:4]=0;
 
 	wire [PA-1:$clog2(LINE_LENGTH)]ctag = ifetch?i_tag:d_tag;
 
-	wire	io_write = 0;
-	wire [7:0]io_data=0;
-	wire [7:0]io_addr=0;
 	qspi  #(.RV(RV), .LINE_LENGTH(LINE_LENGTH), .PA(PA))qspi(.clk(clk), .reset(reset),
 		    .uio_oe(uio_oe[3:0]),
             .uio_out(uio_out[3:0]),
             .cs(uo_out[1:0]),
 
-            .req((ifetch&i_pull)|((|rstrobe| |wmask)&(d_pull|d_push))),
+            .req(((ifetch&i_pull)|((|rstrobe| |wmask)&(d_pull|d_push)))&!io_access),
             .i_d(ifetch),
-            .mem(ctag[PA-1:PA-8]=={8{1'b1}}),  
+            .mem(rom_enable && ! (|wmask)),  
             .write(|wmask && d_push),
             .paddr(ctag),
 
@@ -283,9 +290,9 @@ assign uio_oe[7:4]=0;
             .dwrite(dwrite),
             .rstrobe_d(d_rstrobe_d),
 
-            .reg_addr(io_addr[3:0]),
-            .reg_data(io_data[7:0]),
-            .reg_write(io_write&&(io_addr[7:4]==0)));
+            .reg_addr(addr[3:0]),
+            .reg_data(wdata[7:0]),
+            .reg_write(|wmask&&io_access&&(addr[7:4]==0)));
 
  
 

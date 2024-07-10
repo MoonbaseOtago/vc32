@@ -62,7 +62,7 @@ module dcache(input clk, input reset,
 					3: rdata = {8'bx, r_data[pindex][31:24]};
 					endcase
 				end else begin
-					if (paddr[0]) begin
+					if (paddr[1]) begin
 						rdata = r_data[pindex][31:16];
 					end else begin
 						rdata = r_data[pindex][15:0];

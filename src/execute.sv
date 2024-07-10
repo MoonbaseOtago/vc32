@@ -24,6 +24,7 @@ module execute(input clk, input reset,
 		input [RV-1:0]imm,
 		input	load,
 		input	store,
+		input	io,
 		input	trap,
 		input	sys_call,
 		input	swapsp,
@@ -42,9 +43,11 @@ module execute(input clk, input reset,
 		output	[(RV/8)-1:0]wmask,
 		output	[1:0]	rstrobe,	
 		output			ifetch,	
+		output			io_access,
 		input			rdone,
 		input	[RV-1:0]rdata,
 		output		    fault,
+		output			rom_enable,
 
 		output		mmu_reg_write,
 		output[RV-1:0]mmu_reg_data,
@@ -67,8 +70,10 @@ module execute(input clk, input reset,
 	assign wdata = r_wdata;
 	assign addr = r_wb[VA-1:RV/16];
 	assign  wmask = r_wmask;
+	assign  io_access = r_io_access;
 	reg [(RV/8)-1:0]r_wmask;
 	reg [RV-1:0]r_wdata;
+	reg		r_io_access;
 
 	wire link = ((br&&cond[2])||jmp)&cond[0];
 
@@ -111,7 +116,7 @@ module execute(input clk, input reset,
 
 	wire sup_enabled;
 
-	wire [RV-1:0]csr = {{(RV-6){1'b0}}, mmu_i_proxy, mmu_d_proxy, mmu_enable, sup_enabled, r_prev_ie, r_ie};
+	wire [RV-1:0]csr = {{(RV-7){1'b0}}, r_rom_enable, mmu_i_proxy, mmu_d_proxy, mmu_enable, sup_enabled, r_prev_ie, r_ie};
 
 	always @(*)
 	if (rs1 == r_wb_addr && r_wb_addr!=0) begin
@@ -213,6 +218,8 @@ module execute(input clk, input reset,
 	reg [RV-1:0]r_wb, c_wb;
 	reg [3:0]r_wb_addr;
 	reg r_ie;
+	reg r_rom_enable;
+	assign rom_enable = r_rom_enable;
 	reg r_wb_valid;
 	always @(*)
 `ifdef MULT
@@ -411,6 +418,7 @@ module execute(input clk, input reset,
 	always @(posedge clk) begin
 		//r_trap <= !reset && valid && (trap || interrupt&&r_ie);
 		r_ie <= reset ? 0 : valid && (sys_trap || interrupt&&r_ie) ? 0: r_wb_valid && (r_wb_addr == 4) && sup_enabled ? r_wb[0] : valid&&jmp&&rs1==3&&sup_enabled?r_prev_ie : r_ie; 
+		r_rom_enable <= reset ? 1 : r_wb_valid && (r_wb_addr == 4) && sup_enabled ? r_wb[6] : r_rom_enable; 
 		r_pc <= c_pc;
 		r_branch_stall <= !reset&valid&(jmp|br&br_taken);
 	end
@@ -427,6 +435,8 @@ module execute(input clk, input reset,
 				r_wmask <= reset||wdone?0:|r_wmask? r_wmask :!valid||!store?0: !cond[0]? all_on: {c_wb[1:0]==3, c_wb[1:0]==2, c_wb[1:0]==1, c_wb[1:0]==0};
 		end
 	endgenerate
+	always @(posedge clk) 
+		r_io_access <= valid ? io : r_io_access;
 
 endmodule
 /* For Emacs:

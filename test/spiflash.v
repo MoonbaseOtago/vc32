@@ -80,6 +80,8 @@ module spiflash #(
   reg [3:0] mode = 0;
   reg [3:0] next_mode = 0;
 
+  reg quad = 0;
+
   reg io0_oe = 0;
   reg io1_oe = 0;
   reg io2_oe = 0;
@@ -129,6 +131,7 @@ module spiflash #(
         if (spi_cmd == 8'hab) powered_up = 1;
 
         if (spi_cmd == 8'hb9) powered_up = 0;
+        if (spi_cmd == 8'h35) quad = 1;
 
         if (spi_cmd == 8'hff) xip_cmd = 0;
       end
@@ -263,7 +266,7 @@ module spiflash #(
       buffer = 0;
       bitcount = 0;
       bytecount = 0;
-      mode = mode_spi;
+      mode = (quad?mode_qspi_rd:mode_spi);
       io0_oe = 0;
       io1_oe = 0;
       io2_oe = 0;

@@ -72,6 +72,21 @@ int roffX(int v)
 	}	
 }
 
+int roffIO(int v)
+{
+	if (v&1) {
+		errs++;
+		fprintf(stderr, "%d: invalid offset (must be word aligned)\n", line);
+		return 0;
+	}
+	if (v < 0 || v >= (1<<4)) {
+		errs++;
+		fprintf(stderr, "%d: invalid offset (must be >=0 <64)\n", line);
+		return 0;
+	}
+	return ( (((v>>1)&1)<<6) | (((v>>2)&3)<<10));
+}
+
 int roff(int v)
 {
 	if (v < 0 || v >= (1<<5)) {
@@ -245,8 +260,10 @@ struct tab reserved[] = {
 	"jalr", t_jalr,
 	"jr", t_jr,
 	"lw", t_lw,
+	"ldio", t_ldio,
 	"lb", t_lb,
 	"sw", t_sw,
+	"stio", t_stio,
 	"sb", t_sb,
 	"lea", t_lea,
 	"lui", t_lui,

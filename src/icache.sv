@@ -4,7 +4,7 @@
 //	All Rights Reserved
 
 module icache(input clk, input reset,
-		input  [PA-1:0]paddr,
+		input  [PA-1:1]paddr,
 		input	fault,
 
 		input	[3:0]dread,	
@@ -45,7 +45,7 @@ module icache(input clk, input reset,
 		if (RV == 16) begin
 			if (LINE_LENGTH == 4) begin
 				always @(*)
-				if (paddr[0]) begin
+				if (paddr[1]) begin
 					rdata = r_data[pindex][31:16];
 				end else begin
 					rdata = r_data[pindex][15:0];

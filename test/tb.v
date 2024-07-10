@@ -51,14 +51,14 @@ module tb ();
 	assign b[3] = uio_oe[3]?uio_out[3]:1'bz;
 
 
-	spiflash #(.FILENAME(""))ram(.csb(uo_out[1]),
+	spiflash #(.FILENAME(""))ram(.csb(uo_out[0]),
 			           .clk(uo_out[2]),
 				   .io0(b[0]),
 				   .io1(b[1]),
 				   .io2(b[2]),
 				   .io3(b[3]));
 
-	spiflash #(.FILENAME("init.hex"))rom(.csb(uo_out[0]),
+	spiflash #(.FILENAME("init.hex"))rom(.csb(uo_out[1]),
 			           .clk(uo_out[2]),
 				   .io0(b[0]),
 				   .io1(b[1]),
