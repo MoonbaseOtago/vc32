@@ -147,7 +147,6 @@ assign uio_oe[7:4]=0;
 	wire [VA-1:RV/16]addr;
 	wire [15:0]ins;
 	wire		 iready;
-	wire		 idone;
 	wire		 ifetch;
 `ifdef MULT
 	wire		 mult;
@@ -247,7 +246,6 @@ assign uio_oe[7:4]=0;
 
 	icache #(.PA(PA), .LINE_LENGTH(LINE_LENGTH), .RV(RV), .NLINES(I_NLINES))icache(.clk(clk), .reset(reset),
 		.paddr(phys_addr[PA-1:1]),
-		.fault(fault),
 
 		.dread(uio_in[3:0]),	
 		.wstrobe_d(i_wstrobe_d),
@@ -295,13 +293,13 @@ assign uio_oe[7:4]=0;
 
             .reg_addr(addr[4:1]),
             .reg_data(wdata[7:0]),
-            .reg_write(|wmask&&io_access&&(addr[7:5]==0)));
+            .reg_write(|wmask&&io_access&&!fault&&(addr[7:5]==0)));
 
 	uart		uart(.clk(clk), .reset(reset), 
 					.rx(ui_in[0]),
 					.tx(uo_out[6]),
 					.io_addr(addr[4:1]),
-					.io_write(|wmask&&io_access&&(addr[7:5]==1)),
+					.io_write(|wmask&&io_access&&!fault&&(addr[7:5]==1)),
 					.io_read(rstrobe[0]&&io_access&&(addr[7:5]==1)),
 					.io_wdata(wdata[7:0]),
 					.io_rdata(uart_rdata));

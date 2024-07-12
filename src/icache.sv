@@ -5,7 +5,6 @@
 
 module icache(input clk, input reset,
 		input  [PA-1:1]paddr,
-		input	fault,
 
 		input	[3:0]dread,	
 		input		 wstrobe_d,

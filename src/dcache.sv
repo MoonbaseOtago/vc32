@@ -46,7 +46,7 @@ module dcache(input clk, input reset,
 			hit = valid && match;
 			pull = !hit;
 			tag = {pull?ptag:r_tag[pindex], pindex};
-			push = write && valid && !match && dirty;
+			push = write && valid && !match && dirty && !fault;
 			dwrite = r_data[pindex][4*r_offset-:4];
 			c_offset = wstrobe_d|rstrobe_d ? r_offset+1 : 0;
 		end
@@ -83,12 +83,12 @@ module dcache(input clk, input reset,
 			if (reset) begin
 				r_valid[L] <= 0;
 			end else
-			if (((write && !valid) || wstrobe_d&&r_offset == (LINE_LENGTH*2-1)) && pindex == L)
+			if (((write && !valid && !fault) || wstrobe_d&&r_offset == (LINE_LENGTH*2-1)) && pindex == L)
 				r_valid[L] <= 1;
 
 			always @(posedge clk)
 			if (pindex == L) 
-			if (write && hit) begin
+			if (write && hit && !fault) begin
 				r_dirty[L] <= 1;
 			end else
 			if (wstrobe_d&&r_offset == (LINE_LENGTH*2-1)) begin
@@ -98,7 +98,7 @@ module dcache(input clk, input reset,
 			for (N = 0; N < LINE_LENGTH*2; N=N+1) begin
 				always @(posedge clk)
 				if (pindex == L) 
-				if (write && hit && r_offset == (2*LINE_LENGTH-1)) begin
+				if (write && hit && !fault && r_offset == (2*LINE_LENGTH-1)) begin
 					casez ({is_byte, paddr[1:0]}) // synthesis full_case parallel_case
 					3'b1_?0: r_data[L][N*4+3:N*4] <= wdata[3:0];
 					3'b1_?1: r_data[L][N*4+3:N*4] <= wdata[7:4];
