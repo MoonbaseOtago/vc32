@@ -131,7 +131,7 @@ module uart(input clk, input reset,
 			r_xstate <= r_xstate+1;
 			r_xcnt <= 3;
 			r_x <= r_out[0];
-			r_out <= {1'bx, r_out[7:0]};
+			r_out <= {1'bx, r_out[7:1]};
 		end else begin
 			r_xcnt <= r_xcnt-1;
 		end
@@ -173,7 +173,7 @@ module uart(input clk, input reset,
 		2: io_rdata = {6'b0, r_r_int, r_x_int};
 		4: io_rdata = r_div_value[7:0];
 		5: io_rdata = {4'b0,r_div_value[11:8]};
-		default: io_rdata = 'bx;	
+		default: io_rdata = 8'bx;	
 		endcase
 	end
 

@@ -147,6 +147,7 @@ assign uio_oe[7:4]=0;
 	wire [VA-1:RV/16]addr;
 	wire [15:0]ins;
 	wire		 iready;
+	wire		 idone;
 	wire		 ifetch;
 `ifdef MULT
 	wire		 mult;
@@ -164,7 +165,7 @@ assign uio_oe[7:4]=0;
 		.supmode(supmode),
 		.ins(ins),
 		.iready(iready),
-		.rdone(rdone&!(|rstrobe)),
+		.idone(ifetch&i_hit),
 		.jmp(jmp),
 		.br(br),
 		.cond(cond),
@@ -240,8 +241,8 @@ assign uio_oe[7:4]=0;
 	wire [3:0]dwrite;
 	wire [PA-1:0]phys_addr = {addrp, |wmask|| |rstrobe? addr[$clog2(LINE_LENGTH)-1:RV/16]: pc[$clog2(LINE_LENGTH)-1:RV/16]};
 
-	assign rdone = d_hit && |rstrobe && !(fault|d_pull|d_push);
-	assign wdone = d_hit && |wmask && !(fault|d_pull|d_push);
+	assign rdone =  |rstrobe && (io_access ? io_rdone : d_hit && !(d_pull|d_push)) && !fault;
+	assign wdone =  |wmask &&   (io_access ? io_wdone : d_hit && !(d_pull|d_push)) && !fault;
 
 
 	icache #(.PA(PA), .LINE_LENGTH(LINE_LENGTH), .RV(RV), .NLINES(I_NLINES))icache(.clk(clk), .reset(reset),

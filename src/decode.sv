@@ -17,7 +17,7 @@
 
 module decode(input clk, input reset,
 	    input [15:0]ins, 
-		input rdone,
+		input idone,
 		input supmode,
 
 		output iready,
@@ -42,7 +42,7 @@ module decode(input clk, input reset,
 
 	reg		r_ready; assign iready = r_ready;
 	always @(posedge clk)
-		r_ready <= rdone&!reset;
+		r_ready <= idone&!reset;
 	reg		r_trap, c_trap; assign trap = r_trap;
 	reg		r_sys_call, c_sys_call; assign sys_call = r_sys_call;
 	reg		r_swapsp, c_swapsp; assign swapsp = r_swapsp;
@@ -390,7 +390,7 @@ module decode(input clk, input reset,
 	end
 
 	always @(posedge clk) 
-	if (rdone) begin
+	if (idone) begin
 		r_trap <= c_trap;
 		r_sys_call <= c_sys_call;
 		r_swapsp <= c_swapsp;
