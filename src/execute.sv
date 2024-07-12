@@ -48,6 +48,11 @@ module execute(input clk, input reset,
 		input	[RV-1:0]rdata,
 		output		    fault,
 		output			rom_enable,
+		input			do_flush_all,
+		input			do_flush_write,
+		output			i_flush_all,
+		output			d_flush_all,
+		output			flush_write,
 
 		output		mmu_reg_write,
 		output[RV-1:0]mmu_reg_data,
@@ -75,6 +80,12 @@ module execute(input clk, input reset,
 	reg [RV-1:0]r_wdata;
 	reg		r_io_access;
 
+	reg		r_d_flush_all, r_i_flush_all, r_flush_write;
+	assign d_flush_all = r_d_flush_all;
+	assign i_flush_all = r_i_flush_all;
+	assign flush_write = r_flush_write;
+
+
 	wire link = ((br&&cond[2])||jmp)&cond[0];
 
 
@@ -85,6 +96,8 @@ module execute(input clk, input reset,
 `ifdef MULT
 	reg [2*RV-1:0]r_mult, c_mult;
 `endif
+
+	
 
 	wire	mmu_trap;
 	wire  sys_trap = trap|mmu_trap;
@@ -399,7 +412,6 @@ module execute(input clk, input reset,
 	reg [VA-1:1 ]r_pc, c_pc;
 	wire [VA-1:1 ]pc_plus_1 = r_pc+1;
 
-
 	always @(*)
 	casez ({reset, r_read_stall, valid, sys_trap, sys_call, mmu_trap, interrupt&r_ie, jmp, br&br_taken})  // synthesis full_case parallel_case
 	9'b1????????:	c_pc = 0;	// 0	reset
@@ -435,8 +447,12 @@ module execute(input clk, input reset,
 				r_wmask <= reset||wdone?0:|r_wmask? r_wmask :!valid||!store?0: !cond[0]? all_on: {c_wb[1:0]==3, c_wb[1:0]==2, c_wb[1:0]==1, c_wb[1:0]==0};
 		end
 	endgenerate
-	always @(posedge clk) 
+	always @(posedge clk) begin
 		r_io_access <= valid ? io : r_io_access;
+		r_d_flush_all <= reset ? 0 : valid ? sup_enabled&do_flush_all&imm[0] : r_d_flush_all;
+		r_i_flush_all <= reset ? 0 : valid ? sup_enabled&do_flush_all&imm[1] : r_i_flush_all;
+		r_flush_write <= reset ? 0 : valid ? sup_enabled&do_flush_write : r_flush_write;
+	end
 
 endmodule
 /* For Emacs:

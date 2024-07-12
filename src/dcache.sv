@@ -9,6 +9,9 @@ module dcache(input clk, input reset,
 		input	fault,
 		input  [RV-1:0]wdata,
 
+		input		 flush_all,
+		input		 flush_write,
+
 		input	[3:0]dread,	
 		input		 wstrobe_d,
 		output	reg[3:0]dwrite,
@@ -80,7 +83,7 @@ module dcache(input clk, input reset,
 				r_tag[L] <= ptag;
 
 			always @(posedge clk)
-			if (reset) begin
+			if (reset || flush_all) begin
 				r_valid[L] <= 0;
 			end else
 			if (((write && !valid && !fault) || wstrobe_d&&r_offset == (LINE_LENGTH*2-1)) && pindex == L)

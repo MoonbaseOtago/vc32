@@ -9,6 +9,8 @@ module icache(input clk, input reset,
 		input	[3:0]dread,	
 		input		 wstrobe_d,
 
+		input		 flush_all,
+
 		output  reg hit,
 		output  reg pull,	// if not hit we need to read a line
 		output  reg [PA-1:$clog2(LINE_LENGTH)]tag,
@@ -62,7 +64,7 @@ module icache(input clk, input reset,
 				r_tag[L] <= ptag;
 
 			always @(posedge clk)
-			if (reset) begin
+			if (reset || flush_all) begin
 				r_valid[L] <= 0;
 			end else
 			if ((wstrobe_d&&r_offset == (LINE_LENGTH*2-1)) && pindex == L)

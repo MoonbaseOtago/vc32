@@ -160,6 +160,12 @@ assign uio_oe[7:4]=0;
 	wire [7:0]uart_rdata;
 	wire [RV-1:0]io_rdata={8'b0, uart_rdata};
 
+	wire i_flush_all;
+	wire d_flush_all;
+	wire do_flush_all;
+	wire flush_write;
+	wire do_flush_write;
+
 	decode #(.RV(RV))dec(.clk(clk), .reset(reset),
 		.supmode(supmode),
 		.ins(ins),
@@ -174,6 +180,8 @@ assign uio_oe[7:4]=0;
 		.load(load),
 		.store(store), 
 		.io(io),
+		.do_flush_all(do_flush_all),
+		.do_flush_write(do_flush_write),
 `ifdef MULT
 		.mult(mult),
 `endif
@@ -206,6 +214,11 @@ assign uio_oe[7:4]=0;
 		.load(load),
 		.store(store), 
 		.io(io),
+		.do_flush_write(do_flush_write),
+		.flush_write(flush_write),
+		.do_flush_all(do_flush_all),
+		.d_flush_all(d_flush_all),
+		.i_flush_all(i_flush_all),
 `ifdef MULT
 		.mult(mult),
 `endif
@@ -241,7 +254,7 @@ assign uio_oe[7:4]=0;
 	wire [PA-1:0]phys_addr = {addrp, |wmask|| |rstrobe? addr[$clog2(LINE_LENGTH)-1:RV/16]: pc[$clog2(LINE_LENGTH)-1:RV/16]};
 
 	assign rdone =  |rstrobe && (io_access ? io_rdone : d_hit && !(d_pull|d_push)) && !fault;
-	assign wdone =  |wmask &&   (io_access ? io_wdone : d_hit && !(d_pull|d_push)) && !fault;
+	assign wdone =  |wmask &&   (io_access ? io_wdone : (d_hit && !(d_pull|d_push)) || (!d_hit&&flush_write)) && !fault;
 
 
 	icache #(.PA(PA), .LINE_LENGTH(LINE_LENGTH), .RV(RV), .NLINES(I_NLINES))icache(.clk(clk), .reset(reset),
@@ -249,6 +262,8 @@ assign uio_oe[7:4]=0;
 
 		.dread(uio_in[3:0]),	
 		.wstrobe_d(i_wstrobe_d),
+
+		.flush_all(i_flush_all),
 
 		.hit(i_hit),
 		.pull(i_pull),	// if not hit we need to read a line
@@ -261,6 +276,9 @@ assign uio_oe[7:4]=0;
 		.write(|wmask && !io_access),
 		.fault(fault),
 		.wdata(wdata),
+
+		.flush_all(d_flush_all),
+		.flush_write(flush_write),
 
 		.dread(uio_in[3:0]),	
 		.wstrobe_d(d_wstrobe_d),

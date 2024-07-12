@@ -1,4 +1,4 @@
-%token t_la t_lr t_value t_sp t_epc t_csr t_s0 t_s1 t_a0 t_a1 t_a2 t_a3 t_a4 t_a5 t_and t_or t_xor t_sub t_add t_mv t_nop t_inv t_ebreak t_jalr t_jr t_lw t_lb t_sw t_sb t_lea t_lui t_li t_beqz t_bnez t_bltz t_bgez t_j t_jal t_sll t_srl t_sra t_word t_byte t_name t_nl t_mul t_mulhi t_mmu t_addb t_addbu t_syscall t_stmp t_swapsp t_shl t_shr t_zext t_sext t_ldio t_stio
+%token t_la t_lr t_value t_sp t_epc t_csr t_s0 t_s1 t_a0 t_a1 t_a2 t_a3 t_a4 t_a5 t_and t_or t_xor t_sub t_add t_mv t_nop t_inv t_ebreak t_jalr t_jr t_lw t_lb t_sw t_sb t_lea t_lui t_li t_beqz t_bnez t_bltz t_bgez t_j t_jal t_sll t_srl t_sra t_word t_byte t_name t_nl t_mul t_mulhi t_mmu t_addb t_addbu t_syscall t_stmp t_swapsp t_shl t_shr t_zext t_sext t_ldio t_stio t_flush t_dcache t_icache
 %start  program
 %%
 
@@ -109,11 +109,18 @@ ins:		t_and  rm ',' rm 	{ $$ = 0x8c61|($2<<7)|($4<<2); }
 	|	'.' t_word exp		{ $$ = $3; }
 	|	'.' t_word t_name 	{ $$ = 0; ref_label($3, 1);}
 	|	'.' t_word t_name '+' exp { $$ = $5; ref_label($3, 1); }
-	|	t_ldio r ',' exp '(' rm ')'{ $$ = 0x4000|($6<<7)|roffIO($4)|(($2&7)<<2); chkr($2); }
-	|	t_ldio r ',' '(' rm ')'	{ $$ = 0x4000|($5<<7)|roffIO(0)|(($2&7)<<2); chkr($2); }
-	|	t_stio r ',' exp '(' rm ')'{ $$ = 0xc000|($6<<7)|roffIO($4)|(($2&7)<<2); chkr($2); }
-	|	t_stio r ',' '(' rm ')'	{ $$ = 0xc000|($5<<7)|roffIO(0)|(($2&7)<<2); chkr($2); }
+	|	t_ldio r ',' exp '(' rm ')'{ $$ = 0x4003|($6<<7)|roffIO($4)|(($2&7)<<2); chkr($2); }
+	|	t_ldio r ',' '(' rm ')'	{ $$ = 0x4003|($5<<7)|roffIO(0)|(($2&7)<<2); chkr($2); }
+	|	t_stio r ',' exp '(' rm ')'{ $$ = 0x2003|($6<<7)|roffIO($4)|(($2&7)<<2); chkr($2); }
+	|	t_stio r ',' '(' rm ')'	{ $$ = 0x2003|($5<<7)|roffIO(0)|(($2&7)<<2); chkr($2); }
+	|	t_flush	'(' rm ')'	{ $$ = 0xa003|($3<<7); }
+	|	t_flush	cache		{ $$ = 0x0013|($2<<2); }
 	;
+
+cache:		t_icache		{ $$ = 2; }
+	|	t_dcache		{ $$ = 1; }
+	|	t_dcache t_icache	{ $$ = 3; }
+	|	t_icache t_dcache	{ $$ = 3; }
 
 
 label:		t_name ':'		{ declare_label($1); }

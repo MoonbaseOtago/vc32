@@ -30,6 +30,8 @@ module decode(input clk, input reset,
 		output load,
 		output store, 
 		output io, 
+		output do_flush_all, 
+		output do_flush_write, 
 `ifdef MULT
 		output mult,
 `endif
@@ -61,8 +63,12 @@ module decode(input clk, input reset,
 `ifdef MULT
 	reg		r_mult, c_mult; assign mult = r_mult;
 `endif
+	reg		r_flush_all, c_flush_all; assign do_flush_all = r_flush_all;
+	reg		r_flush_write, c_flush_write; assign do_flush_write = r_flush_write;
 
 	always @(*) begin
+		c_flush_all = 0;
+		c_flush_write = 0;
 		c_trap = 0;
 		c_load = 0;
 		c_io = 0;
@@ -326,6 +332,11 @@ module decode(input clk, input reset,
 									c_rs2 = 0;
 									c_swapsp = 1;
 								 end
+						11'b01??:begin				// flush all
+									c_flush_all = 1;
+									c_imm = {{(RV-2){1'bx}}, ins[3:2]};
+									c_trap = !supmode;
+							   end
 						default: c_trap = 1;
 						endcase
 				    end
@@ -337,6 +348,7 @@ module decode(input clk, input reset,
 						c_rs2 = {1'b1, ins[4:2]};
 						c_rs1 = {1'b1, ins[9:7]};
 						c_imm = {{(RV-4){1'b0}}, ins[11:10],ins[6], 1'b0};
+						c_trap = !supmode;
 					end
 			3'b010: begin 	// lwio
 						c_load = 1;
@@ -345,6 +357,7 @@ module decode(input clk, input reset,
 						c_rd = {1'b1, ins[4:2]};
 						c_rs1 = {1'b1, ins[9:7]};
 						c_imm = {{(RV-4){1'b0}}, ins[11:10],ins[6], 1'b0};
+						c_trap = !supmode;
 				    end
 			3'b011:
 					begin				// lui ** - note inverted extension
@@ -376,6 +389,18 @@ module decode(input clk, input reset,
 							   end
 						default: c_trap = 1;
 						endcase
+					end
+			3'b101: begin 	// flushw (reg)
+						c_store = 1;
+						c_flush_write = 1;
+						c_io = 1;
+						c_cond = 3'bxx0;
+						c_op = `OP_ADD;
+						c_rs2 = {1'b1, ins[4:2]};
+						c_rs1 = 0;
+						c_imm = 0;
+						c_trap = ins[11:6] != 0;// other encodings availa
+						c_trap = !supmode;
 					end
 			3'b11?:	begin	//  bltz/bgez
 						c_br = 1;
@@ -409,6 +434,8 @@ module decode(input clk, input reset,
 		r_br <= c_br;
 		r_cond <= c_cond;
 		r_jmp <= c_jmp;
+		r_flush_all <= c_flush_all;
+		r_flush_write <= c_flush_write;
 	end
 
 

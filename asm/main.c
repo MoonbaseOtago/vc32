@@ -279,6 +279,9 @@ struct tab reserved[] = {
 	"sra", t_sra,
 	"word", t_word,
 	"byte", t_byte,
+	"flush", t_flush,
+	"icache", t_icache,
+	"dcache", t_dcache,
 	0, 0
 };
 
