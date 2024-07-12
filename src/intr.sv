@@ -30,9 +30,9 @@ module intr(input clk, input reset,
 
 	always @(*) begin
 		case (io_addr) 
-		0:	io_rdata = {13'h0, pending};
-		1:	io_rdata = {13'h0, status};
-		2:	io_rdata = {13'h0, r_enable};
+		0:	io_rdata = {11'h0, pending};
+		1:	io_rdata = {11'h0, status};
+		2:	io_rdata = {11'h0, r_enable};
 
 		8:	io_rdata = r_clock_count[15:0];
 		9:	io_rdata = r_clock_count[31:16];
