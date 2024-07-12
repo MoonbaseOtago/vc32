@@ -24,6 +24,7 @@ project:
     - icache.sv
     - mmu.sv
     - qspi.sv 
+    - uart.sv 
 
 # The pinout of your project. Leave unused pins blank. DO NOT delete or add any pins.
 pinout:

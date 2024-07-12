@@ -87,7 +87,8 @@ module vc(input clk, input reset,
 	parameter NMMU=16;
 
 	assign uo_out[2] = clk;
-assign uo_out[7:3]=0;
+assign uo_out[7]=0;
+assign uo_out[5:3]=0;
 assign uio_out[7:4]=0;
 assign uio_oe[7:4]=0;
 
@@ -156,7 +157,8 @@ assign uio_oe[7:4]=0;
 	wire io_rdone=1, io_wdone=1;
 	wire rdone, wdone;
 	wire [RV-1:0]rdata, wdata;
-	wire [RV-1:0]io_rdata=0;
+	wire [7:0]uart_rdata;
+	wire [RV-1:0]io_rdata={8'b0, uart_rdata};
 
 	decode #(.RV(RV))dec(.clk(clk), .reset(reset),
 		.supmode(supmode),
@@ -292,8 +294,16 @@ assign uio_oe[7:4]=0;
 
             .reg_addr(addr[4:1]),
             .reg_data(wdata[7:0]),
-            .reg_write(|wmask&&io_access&&(addr[7:4]==0)));
+            .reg_write(|wmask&&io_access&&(addr[7:5]==0)));
 
+	uart		uart(.clk(clk), .reset(reset), 
+					.rx(ui_in[0]),
+					.tx(uo_out[6]),
+					.io_addr(addr[4:1]),
+					.io_write(|wmask&&io_access&&(addr[7:5]==1)),
+					.io_read(rstrobe[0]&&io_access&&(addr[7:5]==1)),
+					.io_wdata(wdata[7:0]),
+					.io_rdata(uart_rdata));
  
 
 endmodule
