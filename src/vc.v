@@ -151,14 +151,14 @@ assign uio_oe[7:4]=0;
 `ifdef MULT
 	wire		 mult;
 `endif
-	wire interrupt=0;
+	wire interrupt;
 	
 	wire		io_access; 
 	wire io_rdone=1, io_wdone=1;
 	wire rdone, wdone;
 	wire [RV-1:0]rdata, wdata;
 	wire [7:0]uart_rdata;
-	wire [RV-1:0]io_rdata={8'b0, uart_rdata};
+	reg [RV-1:0]io_rdata;
 
 	wire i_flush_all;
 	wire d_flush_all;
@@ -293,6 +293,8 @@ assign uio_oe[7:4]=0;
 
 	wire [PA-1:$clog2(LINE_LENGTH)]ctag = ifetch?i_tag:d_tag;
 
+	wire uart_intr;
+
 	qspi  #(.RV(RV), .LINE_LENGTH(LINE_LENGTH), .PA(PA))qspi(.clk(clk), .reset(reset),
 		    .uio_oe(uio_oe[3:0]),
             .uio_out(uio_out[3:0]),
@@ -316,11 +318,29 @@ assign uio_oe[7:4]=0;
 	uart		uart(.clk(clk), .reset(reset), 
 					.rx(ui_in[0]),
 					.tx(uo_out[6]),
+					.interrupt(uart_intr),
 					.io_addr(addr[4:1]),
 					.io_write(|wmask&&io_access&&!fault&&(addr[7:5]==1)),
 					.io_read(rstrobe[0]&&io_access&&(addr[7:5]==1)),
 					.io_wdata(wdata[7:0]),
 					.io_rdata(uart_rdata));
+
+	wire [15:0]intr_rdata;
+	intr		intr(.clk(clk), .reset(reset),
+					.interrupt(interrupt),
+					.uart_intr(uart_intr),
+					.sd_intr(uart_intr),
+					.io_addr(addr[4:1]),
+					.io_write(|wmask&&io_access&&!fault&&(addr[7:5]==2)),
+					.io_wdata(wdata[15:0]),
+					.io_rdata(intr_rdata));
+
+	always @(*)
+	case (addr[7:5])
+	1:			io_rdata = {8'h0, uart_rdata};
+	2:			io_rdata = intr_rdata;
+	default:	io_rdata = 16'hx;
+	endcase
  
 
 endmodule

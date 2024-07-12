@@ -332,7 +332,7 @@ module decode(input clk, input reset,
 									c_rs2 = 0;
 									c_swapsp = 1;
 								 end
-						11'b01??:begin				// flush all
+						11'b010??:begin				// flush all
 									c_flush_all = 1;
 									c_imm = {{(RV-2){1'bx}}, ins[3:2]};
 									c_trap = !supmode;

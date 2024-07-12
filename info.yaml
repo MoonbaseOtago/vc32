@@ -25,6 +25,7 @@ project:
     - mmu.sv
     - qspi.sv 
     - uart.sv 
+    - intr.sv 
 
 # The pinout of your project. Leave unused pins blank. DO NOT delete or add any pins.
 pinout:
