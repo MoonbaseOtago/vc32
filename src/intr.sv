@@ -38,6 +38,10 @@ module intr(input clk, input reset,
 		9:	io_rdata = r_clock_count[31:16];
 		10:	io_rdata = r_clock_cmp[15:0];
 		11:	io_rdata = r_clock_cmp[31:16];
+		12:	io_rdata = r_timer_count[15:0];
+		13:	io_rdata = {8'h0, r_timer_count[23:16]};
+		14:	io_rdata = r_timer_reload[15:0];
+		15:	io_rdata = {8'h0, r_timer_reload[23:16]};
 		default:	io_rdata = 16'hx;
 		endcase
 	end
@@ -63,15 +67,38 @@ module intr(input clk, input reset,
 		end else
 		if (r_timer_count == 0) begin
 			r_timer <= 1;
+		end else 
+		if (io_write && io_addr == 4) begin
+			r_timer <= r_timer|io_wdata[2];
+		end else
+		if (io_write && io_addr == 5) begin
+			r_timer <= r_timer&~io_wdata[2];
+		end
+	end
+
+	always @(posedge clk) begin
+		if (io_write && io_addr == 12) begin
+			r_timer_count[15:0] <= io_wdata;
+		end else
+		if (io_write && io_addr == 13) begin
+			r_timer_count[23:16] <= io_wdata[7:0];
+		end else
+		if (io_write && io_addr == 15) begin
+			r_timer_count <= {io_wdata[7:0], r_timer_reload[15:0]};
+		end else
+		if (r_timer_count == 0) begin
 			r_timer_count <= r_timer_reload;
 		end else begin
 			r_timer_count <= r_timer_count-1;
-			if (io_write && io_addr == 4) begin
-				r_timer <= r_timer|io_wdata[2];
-			end else
-			if (io_write && io_addr == 5) begin
-				r_timer <= r_timer&~io_wdata[2];
-			end 
+		end
+	end
+
+	always @(posedge clk) begin
+		if (io_write && io_addr == 14) begin
+			r_timer_reload[15:0] <= io_wdata;
+		end else
+		if (io_write && io_addr == 15) begin
+			r_timer_reload[23:16] <= io_wdata[7:0];
 		end
 	end
 
@@ -117,7 +144,7 @@ module intr(input clk, input reset,
 	reg [31:0]r_clock_count;
 	reg [31:0]r_clock_cmp;
 
-	reg [15:0]r_timer_reload;
+	reg [23:0]r_timer_reload;
 	reg [23:0]r_timer_count;
 
 
