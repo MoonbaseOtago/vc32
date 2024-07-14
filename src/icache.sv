@@ -79,10 +79,10 @@ module icache(input clk, input reset,
 			end
 		end
 
-wire [31:0]r0 = r_data[0];
-wire [31:0]r1 = r_data[1];
-wire [31:0]r2 = r_data[2];
-wire [31:0]r3 = r_data[3];
+//wire [31:0]r0 = r_data[0];
+//wire [31:0]r1 = r_data[1];
+//wire [31:0]r2 = r_data[2];
+//wire [31:0]r3 = r_data[3];
 	endgenerate
 
 endmodule
