@@ -43,8 +43,8 @@ module qspi(input clk, input reset,
 
 		always @(posedge clk)
 		if (reset) begin
-			r_read_delay[0] <= 5;
-			r_read_delay[1] <= 5;
+			r_read_delay[0] <= 7;	// 8 clocks for RAM 
+			r_read_delay[1] <= 4;	// 5 clocks for ROM
 			r_mask <= 2'b10;
 		end else
 		if (reg_write) begin
@@ -143,7 +143,7 @@ module qspi(input clk, input reset,
 			   end
 			14:begin
 					c_state = (write? 15 : 17);
-					c_count = 2*LINE_LENGTH;
+					c_count = 2*LINE_LENGTH-1;
 					c_uio_out = {paddr[3:$clog2(LINE_LENGTH)], {$clog2(LINE_LENGTH){1'b0}}};
 			   end
 			15:begin		
@@ -169,14 +169,14 @@ module qspi(input clk, input reset,
 			   end
 			18:begin
 					c_state = 19;
-					c_count = {r_read_delay[mem], 1'b0};
+					c_count = {1'b0, r_read_delay[mem]};
 			   end
 			19:begin
 					if (r_count == 0) begin
-						c_count = 2*LINE_LENGTH;
+						c_count = 2*LINE_LENGTH-1;
 						c_state = 20;
 					end else begin
-						c_count = c_count - 1;
+						c_count = r_count - 1;
 					end
 					c_uio_oe = 2'b00;
 			   end
@@ -185,7 +185,7 @@ module qspi(input clk, input reset,
 						c_cs = 2'b11;
 						c_state = 31;
 					end
-					c_count = c_count - 1;
+					c_count = r_count - 1;
 					wstrobe_i = i_d;
 					wstrobe_d = ~i_d;
 			   end

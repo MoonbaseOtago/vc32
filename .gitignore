@@ -13,3 +13,4 @@ asm/a.out
 asm/vc.tab.c
 asm/vcasm
 bsd
+test/vcd_autosave.sav

@@ -50,7 +50,7 @@ module dcache(input clk, input reset,
 			pull = !hit;
 			tag = {pull?ptag:r_tag[pindex], pindex};
 			push = write && valid && !flush_write && !match && dirty && !fault;
-			dwrite = r_data[pindex][4*r_offset-:4];
+			dwrite = r_data[pindex][4*(r_offset^1)-:4];
 			c_offset = wstrobe_d|rstrobe_d ? r_offset+1 : 0;
 		end
 	
@@ -111,7 +111,7 @@ module dcache(input clk, input reset,
 					3'b0_11: r_data[L][N*4+3:N*4] <= wdata[15:12];
 					endcase
 				end else
-				if (wstrobe_d && r_offset == N) begin
+				if (wstrobe_d && r_offset == (N^1)) begin
 					r_data[L][N*4+3:N*4] <= dread;
 				end
 			end

@@ -48,7 +48,8 @@ module spiflash #(
     inout io3
 );
   localparam verbose = 0;
-  localparam integer latency = 4;  // TODO changed to match KianV
+  localparam integer rom_latency = 4;  
+  localparam integer ram_latency = 7;  
 
   reg rom;
 
@@ -161,7 +162,7 @@ module spiflash #(
         if (bytecount == 5) begin
           xip_cmd = (buffer == 8'ha5) ? spi_cmd : 8'h00;
           mode = mode_dspi_wr;
-          dummycount = latency;
+          dummycount = (rom?rom_latency:ram_latency);
         end
 
         if (bytecount >= 5) begin
@@ -182,7 +183,7 @@ module spiflash #(
         if (bytecount == 5) begin
           xip_cmd = (buffer == 8'ha5) ? spi_cmd : 8'h00;
           mode = mode_qspi_wr;
-          dummycount = latency;
+          dummycount = (rom?rom_latency:ram_latency);
         end
 
         if (bytecount >= 5) begin
@@ -203,7 +204,7 @@ module spiflash #(
         if (bytecount == 5) begin
           xip_cmd = (buffer == 8'ha5) ? spi_cmd : 8'h00;
           mode = mode_qspi_ddr_wr;
-          dummycount = latency;
+          dummycount = (rom?rom_latency:ram_latency);
         end
 
         if (bytecount >= 5) begin

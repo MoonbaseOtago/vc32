@@ -73,11 +73,16 @@ module icache(input clk, input reset,
 			for (N = 0; N < LINE_LENGTH*2; N=N+1) begin
 				always @(posedge clk)
 				if (pindex == L) 
-				if (wstrobe_d && r_offset == N) begin
+				if (wstrobe_d && (r_offset) == (N^1)) begin
 					r_data[L][N*4+3:N*4] <= dread;
 				end
 			end
 		end
+
+wire [31:0]r0 = r_data[0];
+wire [31:0]r1 = r_data[1];
+wire [31:0]r2 = r_data[2];
+wire [31:0]r3 = r_data[3];
 	endgenerate
 
 endmodule

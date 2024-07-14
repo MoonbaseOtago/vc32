@@ -33,7 +33,7 @@ module execute(input clk, input reset,
 `endif
 		input	[3:0]op,
 		input   jmp, 
-		input br, input [2:0]cond,
+		input	br, input [2:0]cond,
 		
 		input	iready,
 		output	[VA-1:1]pc,
@@ -44,6 +44,7 @@ module execute(input clk, input reset,
 		output	[1:0]	rstrobe,	
 		output			ifetch,	
 		output			io_access,
+		input			idone,
 		input			rdone,
 		input	[RV-1:0]rdata,
 		output		    fault,
@@ -217,11 +218,13 @@ module execute(input clk, input reset,
 `endif
 	reg r_fetch;
 	always @(posedge clk)
-		r_fetch <= reset ? 1 : (r_fetch ? !rdone : r_read_stall) ? rdone :
+		r_fetch <= reset ? 1 : 
+					r_fetch ? !idone :
+				    r_read_stall ? rdone :
 `ifdef MULT
 				mult_stall|r_mult_running ? mdone :
 `endif
-				|r_wmask?wdone : (valid && !load && !r_branch_stall && !store
+				|r_wmask ? wdone : (valid && !load && !r_branch_stall && !store
 `ifdef MULT
 								 && !mult_stall
 `endif
@@ -448,7 +451,7 @@ module execute(input clk, input reset,
 		end
 	endgenerate
 	always @(posedge clk) begin
-		r_io_access <= valid ? io : r_io_access;
+		r_io_access <= reset ? 0 : valid ? io : r_io_access;
 		r_d_flush_all <= reset ? 0 : valid ? sup_enabled&do_flush_all&imm[0] : r_d_flush_all;
 		r_i_flush_all <= reset ? 0 : valid ? sup_enabled&do_flush_all&imm[1] : r_i_flush_all;
 		r_flush_write <= reset ? 0 : valid ? sup_enabled&do_flush_write : r_flush_write;

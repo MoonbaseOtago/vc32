@@ -260,6 +260,7 @@ struct tab reserved[] = {
 	"jalr", t_jalr,
 	"jr", t_jr,
 	"lw", t_lw,
+	"ret", t_ret,
 	"ldio", t_ldio,
 	"lb", t_lb,
 	"sw", t_sw,
@@ -411,6 +412,26 @@ yylex(void)
 	if (c == '\n') {
 		line++;
 		return t_nl;
+	} else
+	if (c == '\'') {
+		c = fgetc(fin);
+		if (c == '\\') {
+			c = fgetc(fin);
+			switch (c) {
+			case 'n': c = '\n'; break;
+			case 'r': c = '\r'; break;
+			case 't': c = '\t'; break;
+			case '\'': c = '\''; break;
+			case '\\': c = '\\'; break;
+			default:;
+			}
+		}
+		yylval = c;
+		c = fgetc(fin);
+		if (c != '\'') {
+			yyerror("closing ' expected");
+		}
+		return t_value;
 	} else
 	if (c >= '0' && c <= '9') {
 		int ind;

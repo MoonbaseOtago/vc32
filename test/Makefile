@@ -43,7 +43,7 @@ MODULE = test
 include $(shell cocotb-config --makefiles)/Makefile.sim
 
 init.hex: ../asm/test.s ../asm/vcasm
-	../asm/vcasm ../asm/test.s -h -o init.hex
+	../asm/vcasm -m ../asm/test.s -h -o init.hex
 
 ../asm/vcasm:	../asm/main.c ../asm/vc.y
 	cd ../asm;make vcasm

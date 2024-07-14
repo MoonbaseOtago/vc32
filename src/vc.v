@@ -154,7 +154,8 @@ assign uio_oe[7:4]=0;
 	wire interrupt;
 	
 	wire		io_access; 
-	wire io_rdone=1, io_wdone=1;
+	wire		io_rdone=|rstrobe & io_access;
+	wire		io_wdone=|wmask & io_access;
 	wire rdone, wdone;
 	wire [RV-1:0]rdata, wdata;
 	wire [7:0]uart_rdata;
@@ -165,12 +166,13 @@ assign uio_oe[7:4]=0;
 	wire do_flush_all;
 	wire flush_write;
 	wire do_flush_write;
+	wire idone =ifetch&i_hit;
 
 	decode #(.RV(RV))dec(.clk(clk), .reset(reset),
 		.supmode(supmode),
 		.ins(ins),
 		.iready(iready),
-		.idone(ifetch&i_hit),
+		.idone(idone),
 		.jmp(jmp),
 		.br(br),
 		.cond(cond),
@@ -198,6 +200,7 @@ assign uio_oe[7:4]=0;
 		.ifetch(ifetch),
 		.iready(iready),
 		.rstrobe(rstrobe),
+		.idone(idone),
 		.rdone(io_access?io_rdone:rdone),
 		.wmask(wmask),
 		.wdone(io_access?io_wdone:wdone),
@@ -300,10 +303,10 @@ assign uio_oe[7:4]=0;
             .uio_out(uio_out[3:0]),
             .cs(uo_out[1:0]),
 
-            .req(((ifetch&i_pull)|((|rstrobe| |wmask)&(d_pull|d_push)))&!io_access),
+            .req((ifetch&i_pull)|(((|rstrobe || |wmask)&(d_pull|d_push))&!io_access)),
             .i_d(ifetch),
-            .mem(rom_enable && ! (|wmask)),  
-            .write(|wmask && d_push),
+            .mem(rom_enable && !d_push),  
+            .write(!ifetch && d_push),
             .paddr(ctag),
 
             .wstrobe_d(d_wstrobe_d),

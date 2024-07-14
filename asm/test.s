@@ -1,4 +1,5 @@
 	.=0	
+begin:
 	j	start
 	.=4	
 	j	trap
@@ -23,10 +24,29 @@ sys_trap:
 	lw	a2, (a2)
 	jr	a2
 
+send:	stio	a0, 2(a5)
+sn1:		ldio	a0, 4(a5)
+		and	a0, 1
+		beqz	s0, sn1
+	ret
+copyrom:	lw	a2, (a0)
+		sw	a2, (a0)
+		add	a0, 2
+		add	a1, -1
+	 	bnez 	a1, copyrom
+	ret
+
+
 start:
 	li	a0, 5
 	li 	a1, 6
-	li	a5, 0xfffe	// fffe - address for tests
+	li	a5, 0x20	// 0x20 - uart base
+	la	a0, begin
+	la	a1, end
+	srl	a1
+	jal	copyrom
+	li	a0, 'A'
+	jal	send
 l:		add a1, -1
 		bnez a1, l
 	add	a1, a0
@@ -353,3 +373,5 @@ loc:	.word	0x99
 
 subr:	add	a2, 2
 	jr	lr
+
+end:
