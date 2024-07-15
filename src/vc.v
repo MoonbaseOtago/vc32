@@ -246,8 +246,8 @@ assign uio_oe[7:4]=0;
 
 	
 	parameter LINE_LENGTH=4;  // cache line length (in bytes)
-	parameter I_NLINES=8;  // number of lines
-	parameter D_NLINES=4;  // number of lines
+	parameter I_NLINES=16;  // number of lines
+	parameter D_NLINES=8;  // number of lines
 
 	wire i_hit, i_pull;
 	wire d_hit, d_push, d_pull;
