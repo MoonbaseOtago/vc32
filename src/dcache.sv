@@ -30,6 +30,7 @@ module dcache(input clk, input reset,
 
 	generate
 		reg [LINE_LENGTH*8-1:0]r_data[0:NLINES-1];
+//wire [LINE_LENGTH*8-1:0]r0=r_data[0];
 		reg [PA-1:$clog2(LINE_LENGTH*NLINES)]r_tag[0:NLINES-1];
 		reg [NLINES-1:0]r_dirty;
 		reg [NLINES-1:0]r_valid;
@@ -47,12 +48,27 @@ module dcache(input clk, input reset,
 			valid = r_valid[pindex];
 			dirty = r_dirty[pindex];
 			hit = valid && match;
-			pull = !hit;
 			tag = {pull?ptag:r_tag[pindex], pindex};
-			push = write && valid && !flush_write && !match && dirty && !fault;
-			dwrite = r_data[pindex][4*(r_offset^1)-:4];
+			push = valid && !flush_write && dirty && !fault && !match;
+			pull = !hit && !push;
 			c_offset = wstrobe_d|rstrobe_d ? r_offset+1 : 0;
 		end
+
+		wire [LINE_LENGTH*8-1:0]r = r_data[pindex];
+		if (LINE_LENGTH == 4) begin
+			always @(*)
+			case (r_offset)
+			0: dwrite = r[7:4];
+			1: dwrite = r[3:0];
+			2: dwrite = r[15:12];
+			3: dwrite = r[11:8];
+			4: dwrite = r[23:20];
+			5: dwrite = r[19:16];
+			6: dwrite = r[31:28];
+			7: dwrite = r[27:24];
+			endcase
+		end
+		
 	
 		if (RV == 16) begin
 			if (LINE_LENGTH == 4) begin
@@ -94,7 +110,7 @@ module dcache(input clk, input reset,
 			if (write && hit && !fault) begin
 				r_dirty[L] <= 1;
 			end else
-			if (wstrobe_d&&r_offset == (LINE_LENGTH*2-1)) begin
+			if (rstrobe_d&&(r_offset == (LINE_LENGTH*2-1))) begin
 				r_dirty[L] <= 0;
 			end
 
