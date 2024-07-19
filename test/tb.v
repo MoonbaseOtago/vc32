@@ -45,6 +45,7 @@ module tb ();
         .rst_n      (rst_n)     // not reset
         );
 
+
 	assign b[0] = uio_oe[0]?uio_out[0]:1'bz;
 	assign b[1] = uio_oe[1]?uio_out[1]:1'bz;
 	assign b[2] = uio_oe[2]?uio_out[2]:1'bz;
@@ -65,6 +66,31 @@ module tb ();
 				   .io2(b[2]),
 				   .io3(b[3]));
 
+	wire tx=uo_out[6];
+	reg [7:0]c;
+	reg uart_done;
+	initial begin
+		uart_done <= 0;
+		#1000;
+		forever begin
+			@(negedge tx);
+			#(1760000/2);
+			if (!tx) begin
+				int i;
+				for (i=0; i < 8;i=i+1) begin
+					#1760000;
+					c = {tx, c[7:1]};
+				end
+				@(posedge clk)
+				@(posedge clk)
+				uart_done <= 1;
+				@(posedge clk)
+				uart_done <= 0;
+				#(1760000-30);
+			end
+		end
+	end
+	
 
 `ifdef XTEST
 	initial begin
@@ -74,9 +100,9 @@ module tb ();
 		rst_n = 1;
 		forever begin clk=0; #5 clk=1; #5; end
 	end
-	initial begin
-		#10000;$finish;
-	end
 `endif
+	initial begin
+		#1000000000;$finish;
+	end
 
 endmodule

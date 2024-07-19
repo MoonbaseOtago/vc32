@@ -49,7 +49,7 @@ module spiflash #(
 );
   localparam verbose = 0;
   localparam integer rom_latency = 4;  
-  localparam integer ram_latency = 7;  
+  localparam integer ram_latency = 3;  
 
   reg rom;
 
@@ -63,6 +63,7 @@ module spiflash #(
   reg [7:0] spi_cmd;
   reg [7:0] xip_cmd = 0;
   reg [23:0] spi_addr;
+  reg       spi_write;
 
   reg [7:0] spi_in;
   reg [7:0] spi_out;
@@ -120,6 +121,7 @@ module spiflash #(
     	$display("%s loaded into memory", FILENAME);
 	rom = 1;
     end
+    spi_write = 0;
   end
 
   task spi_action;
@@ -171,6 +173,23 @@ module spiflash #(
         end
       end
 
+      if (powered_up && !rom && spi_cmd == 'h38) begin
+	spi_write = 1;
+        if (bytecount == 1) mode = mode_qspi_rd;
+
+        if (bytecount == 2) spi_addr[23:16] = buffer;
+
+        if (bytecount == 3) spi_addr[15:8] = buffer;
+
+        if (bytecount == 4) spi_addr[7:0] = buffer;
+
+        if (bytecount >= 5) begin
+	  dummycount = 0;
+          memory[spi_addr] = buffer;
+          spi_addr = spi_addr + 1;
+        end
+      end
+
       if (powered_up && spi_cmd == 'heb) begin
         if (bytecount == 1) mode = mode_qspi_rd;
 
@@ -186,7 +205,7 @@ module spiflash #(
           dummycount = (rom?rom_latency:ram_latency);
         end
 
-        if (bytecount >= 5) begin
+        if (bytecount >= (!rom? 6:5)) begin
           buffer   = memory[spi_addr];
           spi_addr = spi_addr + 1;
         end
@@ -264,6 +283,18 @@ module spiflash #(
         $display("");
         $fflush;
       end
+      if (spi_write) begin
+	  spi_cmd = 'h38;
+          buffer   = {buffer, io3, io2, io1, io0};
+          bitcount = bitcount + 4;
+          if (bitcount == 8) begin
+            bitcount  = 0;
+            bytecount = bytecount + 1;
+            spi_action;
+	  end
+	  spi_cmd = 0;
+      end
+      spi_write = 0;
       buffer = 0;
       bitcount = 0;
       bytecount = 0;

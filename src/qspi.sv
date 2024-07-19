@@ -14,10 +14,10 @@ module qspi(input clk, input reset,
 			input		write,
 			input [PA-1:$clog2(LINE_LENGTH)]paddr,
 
-			output	reg  wstrobe_d,
-			output	reg  wstrobe_i,
+			output		wstrobe_d,
+			output		wstrobe_i,
 			input	[3:0]dwrite,
-			output	reg  rstrobe_d,
+			output	    rstrobe_d,
 	
 			input	[3:0]reg_addr,
 			input   [7:0]reg_data,
@@ -28,7 +28,7 @@ module qspi(input clk, input reset,
 	parameter RV=16;
 
 	reg [3:0]r_read_delay[0:1];
-	wire      [1:0]r_quad = 2'b01;
+	reg      [1:0]r_quad;
 	reg      [1:0]r_mask;
 
 	reg		[1:0]r_cs, c_cs;	
@@ -43,17 +43,22 @@ module qspi(input clk, input reset,
 
 		always @(posedge clk)
 		if (reset) begin
-			r_read_delay[0] <= 7;	// 8 clocks for RAM 
+			r_read_delay[0] <= 5;	// 6 clocks for RAM 
 			r_read_delay[1] <= 4;	// 5 clocks for ROM
 			r_mask <= 2'b10;
+			r_quad <= 2'b01;
 		end else
 		if (reg_write) begin
 			r_read_delay[reg_addr[0]] <= reg_data[3:0];
 			r_mask[reg_addr[0]] <= reg_data[7];
+			r_quad[reg_addr[0]] <= reg_data[6];
 		end
 
 		reg [4:0]r_state, c_state;
 		reg [4:0]r_count, c_count;
+		reg r_rstrobe_d, c_rstrobe_d; assign rstrobe_d = r_rstrobe_d;
+		reg r_wstrobe_i, c_wstrobe_i; assign wstrobe_i = r_wstrobe_i;
+		reg r_wstrobe_d, c_wstrobe_d; assign wstrobe_d = r_wstrobe_d;
 
 		always @(posedge clk) begin
 			r_state <= (reset? 0:c_state);
@@ -62,6 +67,9 @@ module qspi(input clk, input reset,
 			r_uio_oe <= (reset?0:c_uio_oe);
 			r_count <= c_count;
 			r_ind <= reset?0:c_ind;
+			r_rstrobe_d <= c_rstrobe_d;
+			r_wstrobe_i <= c_wstrobe_i;
+			r_wstrobe_d <= c_wstrobe_d;
 		end
 
 		wire [6:0]const_38 = 7'h38;
@@ -76,9 +84,9 @@ module qspi(input clk, input reset,
 			c_uio_out = r_uio_out;
 			c_cs = r_cs;
 			c_count = r_count;
-			rstrobe_d = 0;
-			wstrobe_i = 0;
-			wstrobe_d = 0;
+			c_rstrobe_d = 0;
+			c_wstrobe_i = 0;
+			c_wstrobe_d = 0;
 			case (r_state)	// synthesis full_case parallel_case
 			31: if (req)
 			   if (r_quad[mem]) begin
@@ -143,14 +151,16 @@ module qspi(input clk, input reset,
 			   end
 			14:begin
 					c_state = (write? 15 : 17);
+					c_rstrobe_d = write;
 					c_count = 2*LINE_LENGTH-1;
 					c_uio_out = {paddr[3:$clog2(LINE_LENGTH)], {$clog2(LINE_LENGTH){1'b0}}};
 			   end
 			15:begin		
 					if (r_count == 0) begin
 						c_state = 16;
+					end else begin
+						c_rstrobe_d = 1;
 					end
-					rstrobe_d = 1;
 					c_uio_out = dwrite;
 					c_count = r_count-1;
 			   end
@@ -175,6 +185,8 @@ module qspi(input clk, input reset,
 					if (r_count == 0) begin
 						c_count = 2*LINE_LENGTH-1;
 						c_state = 20;
+						c_wstrobe_i = i_d;
+						c_wstrobe_d = ~i_d;
 					end else begin
 						c_count = r_count - 1;
 					end
@@ -184,10 +196,11 @@ module qspi(input clk, input reset,
 					if (r_count == 0) begin
 						c_cs = 2'b11;
 						c_state = 31;
+					end else begin
+						c_wstrobe_i = i_d;
+						c_wstrobe_d = ~i_d;
 					end
 					c_count = r_count - 1;
-					wstrobe_i = i_d;
-					wstrobe_d = ~i_d;
 			   end
 
 			0: begin

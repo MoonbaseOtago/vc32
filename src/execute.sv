@@ -452,8 +452,8 @@ module execute(input clk, input reset,
 	endgenerate
 	always @(posedge clk) begin
 		r_io_access <= reset ? 0 : valid ? io : r_io_access;
-		r_d_flush_all <= reset ? 0 : valid ? sup_enabled&do_flush_all&imm[0] : r_d_flush_all;
-		r_i_flush_all <= reset ? 0 : valid ? sup_enabled&do_flush_all&imm[1] : r_i_flush_all;
+		r_d_flush_all <= reset ? 0 : valid ? sup_enabled&do_flush_all&imm[0] : 0;
+		r_i_flush_all <= reset ? 0 : valid ? sup_enabled&do_flush_all&imm[1] : 0;
 		r_flush_write <= reset ? 0 : valid ? sup_enabled&do_flush_write : r_flush_write;
 	end
 

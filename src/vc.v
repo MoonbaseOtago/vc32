@@ -257,7 +257,7 @@ assign uio_oe[7:4]=0;
 	wire [PA-1:0]phys_addr = {addrp, |wmask|| |rstrobe? addr[$clog2(LINE_LENGTH)-1:RV/16]: pc[$clog2(LINE_LENGTH)-1:RV/16]};
 
 	assign rdone =  |rstrobe && (io_access ? io_rdone : d_hit && !(d_pull|d_push)) && !fault;
-	assign wdone =  |wmask &&   (io_access ? io_wdone : (d_hit && !(d_pull|d_push)) || (!d_hit&&flush_write)) && !fault;
+	assign wdone =  |wmask &&   (io_access ? io_wdone : (d_hit && !(d_pull|d_push)) || (!d_push&&flush_write)) && !fault;
 
 
 	icache #(.PA(PA), .LINE_LENGTH(LINE_LENGTH), .RV(RV), .NLINES(I_NLINES))icache(.clk(clk), .reset(reset),

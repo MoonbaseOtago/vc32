@@ -352,6 +352,7 @@ module decode(input clk, input reset,
 					end
 			3'b010: begin 	// lwio
 						c_load = 1;
+						c_io = 1;
 						c_op = `OP_ADD;
 						c_cond = 3'bxx0;
 						c_rd = {1'b1, ins[4:2]};
@@ -393,13 +394,13 @@ module decode(input clk, input reset,
 			3'b101: begin 	// flushw (reg)
 						c_store = 1;
 						c_flush_write = 1;
-						c_io = 1;
+						c_io = 0;
 						c_cond = 3'bxx0;
 						c_op = `OP_ADD;
-						c_rs2 = {1'b1, ins[4:2]};
-						c_rs1 = 0;
+						c_rs2 = 0;
+						c_rs1 = {1'b1, ins[9:7]};
 						c_imm = 0;
-						c_trap = ins[11:6] != 0;// other encodings availa
+						c_trap = ins[11:10] != 0 || ins[6:2] != 0 ;// other encodings availa
 						c_trap = !supmode;
 					end
 			3'b11?:	begin	//  bltz/bgez

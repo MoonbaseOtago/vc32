@@ -60,7 +60,7 @@ module uart(input clk, input reset,
 	2, 3, 4, 5, 6, 7, 8:
 		if (is_zero) begin
 			if (r_rcnt == 0) begin
-				r_ib <= {r_ib[5:0], r_r};
+				r_ib <= {r_r,r_ib[6:1]};
 				r_rstate <= r_rstate+1;
 				r_rcnt <= 3;
 			end else begin
@@ -69,7 +69,7 @@ module uart(input clk, input reset,
 		end
 	9:	if (is_zero) begin
 			if (r_rcnt == 0) begin
-				r_in <= {r_ib, r_r};
+				r_in <= {r_r, r_ib};
 				r_rcnt <= 3;
 				r_rstate <= 10;
 			end else begin
@@ -124,6 +124,7 @@ module uart(input clk, input reset,
 	1:  if (is_zero) begin
 			r_xcnt <= 3;
 			r_x <= 0;// start bit
+			r_xstate <= 2;
 		end
 	2, 3, 4, 5, 6, 7, 8, 9: 
 		if (is_zero)
