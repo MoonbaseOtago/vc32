@@ -180,7 +180,7 @@ module uart(input clk, input reset,
 
 	always @(posedge clk)
 	if (reset) begin
-		r_div_value <= CLOCK/BAUD/4;
+		r_div_value <= 1; //CLOCK/BAUD/4;	// 1 for testing
 	end else
 	if (io_write) begin
 		case (io_addr)

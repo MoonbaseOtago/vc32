@@ -16,6 +16,9 @@ module tb ();
         #1;
     end
 
+    //parameter UART_PERIOD=1760000;
+    parameter UART_PERIOD=80000;
+
     // wire up the inputs and outputs
     reg  clk;
     reg  rst_n;
@@ -74,11 +77,11 @@ module tb ();
 		#1000;
 		forever begin
 			@(negedge tx);
-			#(1760000/2);
+			#(UART_PERIOD/2);
 			if (!tx) begin
 				int i;
 				for (i=0; i < 8;i=i+1) begin
-					#1760000;
+					#UART_PERIOD;
 					c = {tx, c[7:1]};
 				end
 				@(posedge clk)
@@ -86,7 +89,7 @@ module tb ();
 				uart_done <= 1;
 				@(posedge clk)
 				uart_done <= 0;
-				#(1760000-30);
+				#(UART_PERIOD-30);
 			end
 		end
 	end
