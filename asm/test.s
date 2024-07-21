@@ -29,6 +29,7 @@ sn1:		ldio	a0, 4(a5)
 		and	a0, 1
 		beqz	a0, sn1
 	ret
+
 copyrom:	lw	a2, (a0)
 		sw	a2, (a0)
 		add	a0, 2
@@ -76,14 +77,17 @@ l:		add a1, -1
 		add a0, 1
 		bnez a1, l
 	jal	send		// C+6
-	add	a1, a0
+
 	la	a2, loc
+
 	lw	a0, (a2)	// 0099	
 	jal	send		// 99
+
 	lb	a0, (a2)	// ff99
 	srl	a0
 	jal	send		// cc
-	sw	a3, (a5)
+
+	lb	a3, (a2)	// ff99
 	sw	a3, 2(a2)	// ff99
 	lw	a0, 2(a2)	// ff99
 	srl	a0

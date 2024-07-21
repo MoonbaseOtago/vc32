@@ -254,7 +254,7 @@ assign uio_oe[7:4]=0;
 	wire d_rstrobe_d, d_wstrobe_d, i_wstrobe_d;
 	wire [PA-1:$clog2(LINE_LENGTH)]d_tag, i_tag;
 	wire [3:0]dwrite;
-	wire [PA-1:0]phys_addr = {addrp, |wmask|| |rstrobe? addr[$clog2(LINE_LENGTH)-1:RV/16]: pc[$clog2(LINE_LENGTH)-1:RV/16]};
+	wire [PA-1:1]phys_addr = addrp; // {addrp, |wmask|| |rstrobe? addr[$clog2(LINE_LENGTH)-1:RV/16]: pc[$clog2(LINE_LENGTH)-1:RV/16]};
 
 	assign rdone =  |rstrobe && (io_access ? io_rdone : d_hit && !(d_pull|d_push)) && !fault;
 	assign wdone =  |wmask &&   (io_access ? io_wdone : (d_hit && !(d_pull|d_push)) || (!d_push&&flush_write)) && !fault;
@@ -275,8 +275,8 @@ assign uio_oe[7:4]=0;
 
 	dcache #(.PA(PA), .LINE_LENGTH(LINE_LENGTH), .RV(RV), .NLINES(D_NLINES))dcache(.clk(clk), .reset(reset),
 		.paddr(phys_addr),
-		.is_byte(|wmask && ~wmask != 0),
-		.write(|wmask && !io_access),
+		.read(io_access ? 2'b00: rstrobe ),
+		.write(io_access ? 2'b00: wmask),
 		.fault(fault),
 		.wdata(wdata),
 

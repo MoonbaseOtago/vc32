@@ -67,7 +67,7 @@ module icache(input clk, input reset,
 			if (reset || flush_all) begin
 				r_valid[L] <= 0;
 			end else
-			if ((wstrobe_d&&r_offset == (LINE_LENGTH*2-1)) && pindex == L)
+			if (wstrobe_d && (r_offset == (LINE_LENGTH*2-1)) && pindex == L)
 				r_valid[L] <= 1;
 
 			for (N = 0; N < LINE_LENGTH*2; N=N+1) begin
