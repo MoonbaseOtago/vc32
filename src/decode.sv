@@ -14,6 +14,7 @@
 `define OP_SRL	7
 `define OP_ADDB	8
 `define OP_ADDBU 9
+`define OP_SWAP 10
 
 module decode(input clk, input reset,
 	    input [15:0]ins, 
@@ -380,8 +381,12 @@ module decode(input clk, input reset,
 `ifdef MULT
 								3'b0_00:	c_mult = 1;
 `endif
+`ifdef DIV
+								3'b0_01:	c_div = 1;
+`endif
 								3'b0_10:	c_op = `OP_ADDB;
 								3'b0_11:	c_op = `OP_ADDBU;
+								3'b1_00:	c_op = `OP_SWAP; // swap 
 								//
 								3'b1_10:	begin c_op = `OP_ADDB; c_rs2 = 0; end	// sext
 								3'b1_11:	begin c_op = `OP_ADDBU; c_rs2 = 0; end	// zext

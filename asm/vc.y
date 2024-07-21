@@ -1,4 +1,4 @@
-%token t_la t_lr t_value t_sp t_epc t_csr t_s0 t_s1 t_a0 t_a1 t_a2 t_a3 t_a4 t_a5 t_and t_or t_xor t_sub t_add t_mv t_nop t_inv t_ebreak t_jalr t_jr t_lw t_lb t_sw t_sb t_lea t_lui t_li t_beqz t_bnez t_bltz t_bgez t_j t_jal t_sll t_srl t_sra t_word t_byte t_name t_nl t_mul t_mulhi t_mmu t_addb t_addbu t_syscall t_stmp t_swapsp t_shl t_shr t_zext t_sext t_ldio t_stio t_flush t_dcache t_icache t_ret
+%token t_la t_lr t_value t_sp t_epc t_csr t_s0 t_s1 t_a0 t_a1 t_a2 t_a3 t_a4 t_a5 t_and t_or t_xor t_sub t_add t_mv t_nop t_inv t_ebreak t_jalr t_jr t_lw t_lb t_sw t_sb t_lea t_lui t_li t_beqz t_bnez t_bltz t_bgez t_j t_jal t_sll t_srl t_sra t_word t_byte t_name t_nl t_mul t_mulhi t_mmu t_addb t_addbu t_syscall t_stmp t_swapsp t_shl t_shr t_zext t_sext t_ldio t_stio t_flush t_dcache t_icache t_ret t_swap
 %start  program
 %%
 
@@ -57,6 +57,7 @@ ins:		t_and  rm ',' rm 	{ $$ = 0x8c61|($2<<7)|($4<<2); }
 	|	t_mul  rm ',' rm        { $$ = 0x8c03|($2<<7)|($4<<2); } 
 	|	t_addb  rm ',' rm       { $$ = 0x8c43|($2<<7)|($4<<2); } 
 	|	t_addbu  rm ',' rm      { $$ = 0x8c63|($2<<7)|($4<<2); } 
+	|	t_swap  rm ',' rm      	{ $$ = 0x9c03|($2<<7)|($4<<2); } 
 	|	t_sext  rm      	{ $$ = 0x9c43|($2<<7); } 
 	|	t_zext  rm      	{ $$ = 0x9c63|($2<<7); } 
 	|	t_xor  rm ',' rm        { $$ = 0x8c21|($2<<7)|($4<<2); } 

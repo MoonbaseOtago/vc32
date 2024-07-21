@@ -93,15 +93,21 @@ l:		add a1, -1
 	srl	a0
 	jal	send		// cc
 
-	jal fail
-
 	li 	a0, 0x55
 	sb 	a0, 3(a2)	
 	lw	a4, 2(a2)	// 5599
-	sw	a4, (a5)
-	lb	a1, 3(a2)	// 0055
-	sw	a1, (a5)
+	mv	a0, a4		// 99
+	jal     send
+	swap	a0, a4
+	jal     send		// 55
 
+	lb	a4, 3(a2)	// 0055
+	mv	a0, a4		// 55
+	jal     send
+	swap	a0, a4
+	jal     send		// 00
+
+	jal fail
 	li	a0, 0x33
 	li	a2, 0x55
 	or	a2, a0		// 0077

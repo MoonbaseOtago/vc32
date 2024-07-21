@@ -14,6 +14,7 @@
 `define OP_SRL	7
 `define OP_ADDB	8
 `define OP_ADDBU 9
+`define OP_SWAP 10
 
 module execute(input clk, input reset,
 		input interrupt,
@@ -254,6 +255,7 @@ module execute(input clk, input reset,
 	`OP_SRL:	c_wb = {1'b0, r1[RV-1:1]};
 	`OP_ADDB:	c_wb = {{(RV-8){added[7]}}, added[7:0]};
 	`OP_ADDBU:	c_wb = {{(RV-8){1'b0}}, added[7:0]};
+	`OP_SWAP:	c_wb = {r2[7:0], r2[15:8]};
 	endcase
 
 `ifdef MULT
