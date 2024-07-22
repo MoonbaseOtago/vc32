@@ -167,9 +167,11 @@ assign uio_oe[7:4]=0;
 	wire flush_write;
 	wire do_flush_write;
 	wire idone =ifetch&i_hit;
+	wire		user_io;
 
 	decode #(.RV(RV))dec(.clk(clk), .reset(reset),
 		.supmode(supmode),
+		.user_io(user_io),
 		.ins(ins),
 		.iready(iready),
 		.idone(idone),
@@ -229,6 +231,7 @@ assign uio_oe[7:4]=0;
 		.mmu_reg_data(mmu_reg_data),
 		.mmu_read(mmu_read),
 		.supmode(supmode),
+		.user_io(user_io),
 		.mmu_enable(mmu_enable),
 		.mmu_i_proxy(mmu_i_proxy),
 		.mmu_d_proxy(mmu_d_proxy),

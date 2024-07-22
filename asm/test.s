@@ -107,153 +107,229 @@ l:		add a1, -1
 	swap	a0, a4
 	jal     send		// 00
 
-	jal fail
-	li	a0, 0x33
-	li	a2, 0x55
-	or	a2, a0		// 0077
-	sw	a2, (a5)
-	li	a2, 0x55
-	and	a2, a0		// 0011
-	sw	a2, (a5)
-	li	a2, 0x55
-	xor	a2, a0		// 0066
-	sw	a2, (a5)
-	li	a2, 0x5
-	and	a2, 0x3		// 0001
-	sw	a2, (a5)
+	li	a4, 0x33
+	li	a0, 0x55
+	or	a0, a4		// 0077
+	jal	send		// 77
 
-	li	a2, 0x5
-	li	a0, 0x3
-	sub	a2, a0		// 0002
-	sw	a2, (a5)
+	li	a0, 0x55
+	and	a0, a4		// 0011
+	jal	send		// 11
 
-	li	a2, 1
+	li	a0, 0x55
+	xor	a0, a4		// 0066
+	jal	send		// 66
+
+	li	a0, 0x5
+	and	a0, 0x3		// 0001
+	jal	send		// 01
+
+	li	a0, 0x5
+	li	a2, 0x3
+	sub	a0, a2		// 0002
+	jal	send		// 02
+
+	li	a0, 1
 	jal	subr
-	add	a2, 1
-	sw	a2, (a5)	// 4
+	add	a0, 1
+	jal	send		// 4
 
-	la	a0, subr
-	jalr	a0
-	add	a2, 1
-	sw	a2, (a5)	// 7
+	li	a0, 4
+	la	a4, subr
+	jalr	a4
+	add	a0, 1
+	jal	send		// 7
 
 	la	a0, loc
 	mv	sp, a0
 	lw	a1, 2(sp)	// 5599
-	sw	a1, (a5)	
+	mv	a0, a1
+	jal     send  		// 99
+	swap	a0, a1
+	jal     send  		// 55
+
+
 	add	sp, 2
-	lw	a2, (sp)	// 5599
-	sw	a1, (a5)	
-	add	a2, 1
-	sw	a2, 2(sp)	// 559a
+	lw	a1, (sp)	// 5599
+	mv	a0, a1
+	jal     send  		// 99
+	swap	a0, a1
+	jal     send  		// 55
+
+	add	a1, 1
+	sw	a1, 2(sp)	// 559a
 	add	sp, -2
 	lea	a1, 4(sp)	// loc+4
 	lw	a1, (a1)	// 559a
-	sw	a1, (a5)	
+	mv	a0, a1
+	jal     send  		// 9a
+	swap	a0, a1
+	jal     send  		// 55
 	
+	li 	a1, 0
 	li 	a0, 0
-	li 	a1, 0
-	bgez	a0, b1
-		li a1, 1
+	bgez	a1, b1
+		li a0, 1
 b1:				// should be 0
-	sw	a1, (a5)	
-	li 	a0, -1
-	bgez	a0, b2
-		li a1, 2
+	jal     send  		// 0
+
+
+	li 	a1, -1
+	bgez	a1, b2
+		li a0, 2
 b2:				// should be 2
-	sw	a1, (a5)	
-	li 	a1, 0
-	li 	a0, 1
-	bgez	a0, b3
-		li a1, 3
+	jal     send  		// 2
+
+	li 	a0, 0
+	li 	a1, 1
+	bgez	a1, b3
+		li a0, 3
 b3:				// should be 0
-	sw	a1, (a5)	
-	li 	a1, 0
-	li	a0, 0
-	bltz	a0, b4
-		li a1, 4
+	jal     send  		// 0
+
+	li 	a0, 0
+	li	a1, 0
+	bltz	a1, b4
+		li a0, 4
 b4:				// should be 4
-	sw	a1, (a5)	
-	li 	a1, 0
-	li	a0, -1
-	bltz	a0, b5
-		li a1, 5
+	jal     send  		// 4
+
+	li 	a0, 0
+	li	a1, -1
+	bltz	a1, b5
+		li a0, 5
 b5:				// should be 0
-	sw	a1, (a5)	
-	li 	a1, 0
-	li	a0, 1
-	bltz	a0, b6
-		li a1, 6
+	jal     send  		// 0
+
+	li 	a0, 0
+	li	a1, 1
+	bltz	a1, b6
+		li a0, 6
 b6:				// should be 6
-	sw	a1, (a5)	
-	li 	a1, 0
-	li	a0, 1
-	bnez	a0, b7
-		li a1, 7
+	jal     send  		// 6
+
+	li 	a0, 0
+	li	a1, 1
+	bnez	a1, b7
+		li a0, 7
 b7:				// should be 0
-	sw	a1, (a5)	
-	li 	a1, 0
-	li	a0, 0
-	bnez	a0, b8
-		li a1, 8
+	jal     send  		// 0
+
+	li 	a0, 0
+	li	a1, 0
+	bnez	a1, b8
+		li a0, 8
 b8:				// should be 8
-	sw	a1, (a5)	
-	li 	a1, 0
-	li	a0, -1
-	bnez	a0, b9
-		li a1, 9
+	jal     send  		// 8
+
+	li 	a0, 0
+	li	a1, -1
+	bnez	a1, b9
+		li a0, 9
 b9:				// should be 0
-	sw	a1, (a5)	
-	li 	a1, 0
-	li	a0, 1
-	beqz	a0, b10
-		li a1, 10
+	jal     send  		// 0
+
+	li 	a0, 0
+	li	a1, 1
+	beqz	a1, b10
+		li a0, 10
 b10:				// should be 10
-	sw	a1, (a5)	
-	li 	a1, 0
-	li	a0, 0
-	beqz	a0, b11
-		li a1, 11
+	jal     send  		// 10
+
+	li 	a0, 0
+	li	a1, 0
+	beqz	a1, b11
+		li a0, 11
 b11:				// should be 0
-	sw	a1, (a5)	
-	li 	a1, 0
-	li	a0, -1
-	beqz	a0, b12
-		li a1, 12
+	jal     send  		// 0
+
+	li 	a0, 0
+	li	a1, -1
+	beqz	a1, b12
+		li a0, 12
 b12:				// should be 12
-	sw	a1, (a5)	
+	jal     send  		// 12
+
 
 	li 	s0, -3
 	sra	s0
-	sw	s0, (a5)	// fffe
+	mv	a0, s0
+	jal     send            // fe
+	swap	a0, s0
+	jal     send            // ff
+
+
 	li 	s0, -3
 	srl	s0
-	sw	s0, (a5)	// 7ffe
+	mv	a0, s0
+	jal     send            // fe
+	swap	a0, s0
+	jal     send            // 7f
+
 	li 	s0, -3
 	sll	s0
-	sw	s0, (a5)	// fffa
+	mv	a0, s0
+	jal     send            // fa
+	swap	a0, s0
+	jal     send            // ff
+
 	li	s0, 3
 	li	s1, 8
 	mul	s0, s1
-	sw      s0, (a5)        // 24
+	mv	a0, s0
+	jal     send            // 24
+	swap	a0, s0
+	jal     send            // 00
+
 	mv	s0, mulhi
-	sw      s0, (a5)        // 0
+	mv	a0, s0
+	jal     send            // 00
+	swap	a0, s0
+	jal     send            // 00
+
+
+
 	li	s0, -1
 	mv	s1, s0
 	mul	s0, s1
-	sw      s0, (a5)        // 0001
+	mv	a0, s0
+	jal     send            // 01
+	swap	a0, s0
+	jal     send            // 00
+
+
 	mv	s0, mulhi
-	sw      s0, (a5)        // 0xfffe
+	mv	a0, s0
+	jal     send            // fe
+	swap	a0, s0
+	jal     send            // ff
+
+
+
 	li	s0, 0
 	mv	s1, s0
 	mul	s0, s1
-	sw      s0, (a5)        // 0
+	mv	a0, s0
+	jal     send            // 00
+	swap	a0, s0
+	jal     send            // 00
+
 	mv	s0, mulhi
-	sw      s0, (a5)        // 0
+	mv	a0, s0
+	jal     send            // 00
+	swap	a0, s0
+	jal     send            // 00
+
+
 	li	s0, 0x15
 	mv	stmp, s0
 	mv 	s1, stmp
-	sw      s1, (a5)        // 0x15
+	mv	a0, s1
+	jal     send            // 15
+	swap	a0, s1
+	jal     send            // 00
+
+
 // turn off mmu
 	li	a0, 32
 lp1:
@@ -264,6 +340,13 @@ lp1:
 		mv	mmu, a1
 		bnez	a0, lp1
 //
+
+	mv	a0, csr		// set user_io
+	li	a1, 1<<6
+	sll	a1
+	or	a0, a1
+	mv	csr, a0
+
 	li 	s1, 0x14
 	li	a0, 1
 	la	s0, r1
@@ -272,9 +355,16 @@ lp1:
 	jr	epc
 xx1:	j	xx1
 r1:
-	sw      s1, (a5)	// 0x14
+	mv	a0, s1
+	jal     send            // 14
+	swap	a0, s1
+	jal     send            // 00
+
 	mv	s1, csr
-	sw	s1, (a5)        // 0x4
+	mv	a0, s1
+	jal     send            // 84
+	swap	a0, s1
+	jal     send            // 00
 	
 	la      s0, r2
 	mv	epc, s0
@@ -283,9 +373,10 @@ r1:
 
 syscall1:
 	li 	a0, 0x19
-	sw      a0, (a5)        // 0x19
-	mv	s1, csr
-	sw	s1, (a5)        // 0x4
+	jal     send            // 19
+
+	mv	a0, csr
+	jal     send            // 84
 	jr	epc
 
 
@@ -294,13 +385,13 @@ r2:
 	la	a1, syscall_vector
 	sw	a0, (a1)
 
-	mv	s1, csr
-	sw	s1, (a5)        // 0x9
+	mv	a0, csr
+	jal     send            // 89
 sc:	syscall					// goes to syscall1
 r3:	li	a0, 0x1a	
-	sw      a0, (a5)        // 0x1a
-	mv	s1, csr
-	sw	s1, (a5)        // 0x0
+	jal     send            // 1a
+	mv	a0, csr
+	jal	send		// 80
 	
 	la	a0, syscall2
 	la	a1, syscall_vector
@@ -308,17 +399,20 @@ r3:	li	a0, 0x1a
 	syscall					// goes to syscall2
 syscall2:		
 	li	a0, 0x1b	
-	sw      a0, (a5)        // 0x1b
-	mv	s1, csr
-	sw	s1, (a5)        // 0x4
-	mv	s1, epc
+	jal	send		// 0x1b
+	mv	a0, csr
+	jal	send		// 0x84
+	mv	a0, epc
 	li	a2, 1
-	and	s1, a2
-	sw	s1, (a5)        // 0x0
+	and	a0, a2
+	jal	send		// 0x0
 	mv	s1, epc
 	la	a2, syscall2
 	sub	s1, a2
-	sw	s1, (a5)        // 0x0
+	mv	a0, s1
+	jal	send		// 0x0
+	swap	a0, s1
+	jal	send		// 0x0
 //
 //	mmu tests
 //
@@ -330,13 +424,14 @@ syscall2:
 	mv	mmu, a0
 	li	a0, 0x3		// V ->0 
 	mv	mmu, a0
-	sw	a0, (a5)        // 0x3 #0
+	jal	send		//0x3 #0
 
 	li	a0, 0x20	// S D #0
 	mv	mmu, a0
 	li	a0, 0x07	// V W ->0 
 	mv	mmu, a0
-	sw	a0, (a5)        // 0x7
+	jal	send		//0x7
+
 
 	li	a0, 0x3e	// S D #f
 	mv	mmu, a0
@@ -346,13 +441,16 @@ syscall2:
 	zext	a1
 	or	a0, a1
 	mv	mmu, a0
-	sw	a0, (a5)        // 0x3c7
+	jal     send		// 0x3c7
+
 // turn on MMU
 	mv	a0, csr
 	or	a0, 0x8
 	mv	csr, a0
 xx:
-	sw	a0, (a5)        // 0xc
+	jal	send		// 0x8c
+
+	jal fail
 
 	li	a0, 0xffdf
 	sext	a0
@@ -413,7 +511,7 @@ loc:	.word	0x99
 	.word	0x0
 	.word	0x0
 
-subr:	add	a2, 2
+subr:	add	a0, 2
 	jr	lr
 
 fail:	li a0,-1

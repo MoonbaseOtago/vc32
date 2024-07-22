@@ -20,6 +20,7 @@ module decode(input clk, input reset,
 	    input [15:0]ins, 
 		input idone,
 		input supmode,
+		input user_io,
 
 		output iready,
 		output jmp,
@@ -349,7 +350,7 @@ module decode(input clk, input reset,
 						c_rs2 = {1'b1, ins[4:2]};
 						c_rs1 = {1'b1, ins[9:7]};
 						c_imm = {{(RV-4){1'b0}}, ins[11:10],ins[6], 1'b0};
-						c_trap = !supmode;
+						c_trap = !supmode && !user_io;
 					end
 			3'b010: begin 	// lwio
 						c_load = 1;
@@ -359,7 +360,7 @@ module decode(input clk, input reset,
 						c_rd = {1'b1, ins[4:2]};
 						c_rs1 = {1'b1, ins[9:7]};
 						c_imm = {{(RV-4){1'b0}}, ins[11:10],ins[6], 1'b0};
-						c_trap = !supmode;
+						c_trap = !supmode && !user_io;
 				    end
 			3'b011:
 					begin				// lui ** - note inverted extension

@@ -61,6 +61,7 @@ module execute(input clk, input reset,
 		input[RV-1:0]mmu_read,
 		output		supmode,
 		output		mmu_enable,
+		output		user_io,
 		output		mmu_fault,
 		output		mmu_i_proxy,
 		output		mmu_d_proxy,
@@ -131,7 +132,7 @@ module execute(input clk, input reset,
 
 	wire sup_enabled;
 
-	wire [RV-1:0]csr = {{(RV-7){1'b0}}, r_rom_enable, mmu_i_proxy, mmu_d_proxy, mmu_enable, sup_enabled, r_prev_ie, r_ie};
+	wire [RV-1:0]csr = {{(RV-8){1'b0}}, user_io, r_rom_enable, mmu_i_proxy, mmu_d_proxy, mmu_enable, sup_enabled, r_prev_ie, r_ie};
 
 	always @(*)
 	if (rs1 == r_wb_addr && r_wb_addr!=0) begin
@@ -326,6 +327,8 @@ module execute(input clk, input reset,
 			assign supmode = r_supmode;
 			reg		r_prev_supmode, c_prev_supmode;
 			assign prev_supmode = r_prev_supmode;
+			reg r_user_io;
+			assign user_io = r_user_io;
 			reg r_mmu_enable;
 			assign mmu_enable = r_mmu_enable;
 			reg r_mmu_i_proxy;
@@ -367,6 +370,13 @@ module execute(input clk, input reset,
 
 			always @(posedge clk) 
 			if (reset) begin
+				r_user_io <= 0;
+			end else 
+			if (r_wb_valid && r_wb_addr == 4'b0100 && sup_enabled)
+				r_user_io <= r_wb[7];
+
+			always @(posedge clk) 
+			if (reset) begin
 				r_mmu_enable <= 0;
 			end else 
 			if (r_wb_valid && r_wb_addr == 4'b0100 && sup_enabled)
@@ -392,6 +402,7 @@ module execute(input clk, input reset,
 			assign prev_supmode = 1;
 			assign sup_enabled = 1;
 			assign mmu_enable = 0;
+			assign user_io = 0;
 			assign mmu_trap = 0;
 			assign mmu_fault = 0;
 		end
