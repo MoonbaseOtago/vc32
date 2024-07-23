@@ -385,8 +385,6 @@ r2:
 	la	a1, syscall_vector
 	sw	a0, (a1)
 
-	mv	a0, csr
-	jal     send            // 89
 sc:	syscall					// goes to syscall1
 r3:	li	a0, 0x1a	
 	jal     send            // 1a
@@ -501,6 +499,7 @@ wrt:
 	sw	a1, (a5)        // 0xffaa
 	
 
+// something to test addpc
 	ebreak
 
 loc:	.word	0x99

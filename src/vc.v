@@ -141,6 +141,7 @@ assign uio_oe[7:4]=0;
 	wire   [3:0]op;
 	wire   [3:0]rs1, rs2, rd;
 	wire		needs_rs2; 
+	wire		rs2_pc;
 	wire [RV-1:0]imm;
 
 	wire [VA-1:1]pc;
@@ -194,6 +195,7 @@ assign uio_oe[7:4]=0;
 		.rs2(rs2),
 		.rd(rd),
 		.needs_rs2(needs_rs2), 
+		.rs2_pc(rs2_pc), 
 		.imm(imm));
 
 	execute #(.VA(VA), .RV(RV), .NMMU(NMMU), .MMU(MMU))ex(.clk(clk), .reset(reset),
@@ -245,6 +247,7 @@ assign uio_oe[7:4]=0;
 		.rs2(rs2),
 		.rd(rd),
 		.needs_rs2(needs_rs2), 
+		.rs2_pc(rs2_pc), 
 		.imm(imm));
 
 	

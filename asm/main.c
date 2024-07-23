@@ -246,6 +246,7 @@ struct tab reserved[] = {
 	"swap", t_swap,
 	"sext", t_sext,
 	"zext", t_zext,
+	"addpc", t_addpc,
 	"mulhi", t_mulhi,
 	"mmu", t_mmu,
 	"mul", t_mul,

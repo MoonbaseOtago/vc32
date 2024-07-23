@@ -40,6 +40,7 @@ module decode(input clk, input reset,
 		output [3:0]op,
 		output [3:0]rs1, output[3:0]rs2, output [3:0]rd,
 		output needs_rs2, 
+		output rs2_pc, 
 		output [RV-1:0]imm);
 
 	parameter RV=32;	// register width
@@ -61,6 +62,7 @@ module decode(input clk, input reset,
 	reg[3:0]r_rs2, c_rs2; assign rs2 = r_rs2;
 	reg[3:0]r_rd, c_rd; assign rd = r_rd;
 	reg		r_needs_rs2, c_needs_rs2; assign needs_rs2 = r_needs_rs2;
+	reg		r_rs2_pc, c_rs2_pc; assign rs2_pc = r_rs2_pc;
 	reg[RV-1:0]r_imm, c_imm; assign imm = r_imm;
 `ifdef MULT
 	reg		r_mult, c_mult; assign mult = r_mult;
@@ -85,7 +87,8 @@ module decode(input clk, input reset,
 		c_jmp = 0;
 		c_br = 0;
 		c_sys_call = 0;
-		c_swapsp = 0;
+		c_swapsp = 0; 
+		c_rs2_pc = 0;
 `ifdef MULT
 		c_mult = 0;
 `endif
@@ -242,6 +245,7 @@ module decode(input clk, input reset,
 						end else begin
 							c_imm = {{(RV-9){1'b0}}, ins[4:2], ins[12:11], ins[5],ins[6], 2'b0};
 						end
+						c_trap = !supmode && (c_rd >= 4'b0011 && c_rd <= 4'b0110);
 					end
 			3'b011:	begin	// lbsp  **
 						c_load = 1;
@@ -254,6 +258,7 @@ module decode(input clk, input reset,
 						end else begin
 							c_imm = {{(RV-7){1'b0}},          ins[2],   ins[12],ins[6:4], ins[11], ins[3]};
 						end
+						c_trap = !supmode && (c_rd >= 4'b0011 && c_rd <= 4'b0110);
 					end
 			3'b100:	if (!ins[12]) begin
 						if (ins[6:2] == 0) begin	// jr
@@ -263,12 +268,14 @@ module decode(input clk, input reset,
 							c_rs1 = ins[10:7];
 							c_rs2 = 0;
 							c_needs_rs2 = 1;
+							c_trap = !supmode && (c_rs1 >= 4'b0011 && c_rs1 <= 4'b0110);
 						end else begin	// mv
 							c_op = `OP_ADD;
 							c_rd = ins[10:7];
 							c_rs1 = 0;
 							c_rs2 = ins[5:2];
 							c_needs_rs2 = 1;
+							c_trap = !supmode && ((c_rs2 >= 4'b0011 && c_rs2 <= 4'b0110) || (c_rs1 >= 4'b0011 && c_rs1 <= 4'b0110));
 						end
 					end else begin
 						if (ins[6:2] == 0) begin	// jalr
@@ -280,12 +287,14 @@ module decode(input clk, input reset,
 							c_rs1 = ins[10:7];
 							c_rs2 = 0;
 							c_needs_rs2 = 1;
-						end else begin	// ad
+							c_trap = !supmode && (c_rs1 >= 4'b0011 && c_rs1 <= 4'b0110);
+						end else begin	// add
 							c_op = `OP_ADD;
 							c_rd = ins[10:7];
 							c_rs1 = ins[10:7];
 							c_rs2 = ins[5:2];
 							c_needs_rs2 = 1;
+							c_trap = !supmode && ((c_rs2 >= 4'b0011 && c_rs2 <= 4'b0110) || (c_rs1 >= 4'b0011 && c_rs1 <= 4'b0110));
 						end
 					end
 			3'b110:	begin	// swsp  **
@@ -299,6 +308,7 @@ module decode(input clk, input reset,
 						end else begin
 							c_imm = {{(RV-9){1'b0}}, ins[4:2], ins[12:11], ins[5],ins[6], 2'b0};
 						end
+						c_trap = !supmode && (c_rs2 >= 4'b0011 && c_rs2 <= 4'b0110);
 					end
 			3'b111:	begin	// sbsp  **
 						c_store = 1;
@@ -311,6 +321,7 @@ module decode(input clk, input reset,
 						end else begin
 							c_imm = {{(RV-7){1'b0}},          ins[2],   ins[12],ins[6:4], ins[11], ins[3]};
 						end
+						c_trap = !supmode && (c_rs2 >= 4'b0011 && c_rs2 <= 4'b0110);
 					end
 			default: c_trap = 1;
 			endcase
@@ -388,7 +399,7 @@ module decode(input clk, input reset,
 								3'b0_10:	c_op = `OP_ADDB;
 								3'b0_11:	c_op = `OP_ADDBU;
 								3'b1_00:	c_op = `OP_SWAP; // swap 
-								//
+								3'b1_01:	begin c_op = `OP_ADDB; c_rs2_pc = 1; c_rs2 = 0; end	// sext
 								3'b1_10:	begin c_op = `OP_ADDB; c_rs2 = 0; end	// sext
 								3'b1_11:	begin c_op = `OP_ADDBU; c_rs2 = 0; end	// zext
 								default:	c_trap = 1;

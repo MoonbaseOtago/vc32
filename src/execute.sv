@@ -22,6 +22,7 @@ module execute(input clk, input reset,
 		input [3:0]rs1, 
 		input [3:0]rs2, 
 		input needs_rs2,
+		input rs2_pc,
 		input [RV-1:0]imm,
 		input	load,
 		input	store,
@@ -172,6 +173,9 @@ module execute(input clk, input reset,
 	end
 
 	always @(*) 
+	if (rs2_pc) begin
+		r2 = r_pc;
+	end else
 	if (!needs_rs2) begin
 		r2 = imm;
 	end else begin
