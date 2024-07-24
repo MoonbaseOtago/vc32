@@ -440,6 +440,7 @@ module decode(input clk, input reset,
 		r_rs1 <= c_rs1;
 		r_rs2 <= c_rs2;
 		r_needs_rs2 <= c_needs_rs2;
+		r_rs2_pc <= c_rs2_pc;
 		r_rd <= c_rd;
 		r_imm <= c_imm;
 		r_store <= c_store;

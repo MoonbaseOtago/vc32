@@ -174,7 +174,7 @@ module execute(input clk, input reset,
 
 	always @(*) 
 	if (rs2_pc) begin
-		r2 = r_pc;
+		r2 = {r_pc, 1'b0};
 	end else
 	if (!needs_rs2) begin
 		r2 = imm;
