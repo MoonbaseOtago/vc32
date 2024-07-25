@@ -25,6 +25,7 @@ module uart(input clk, input reset,
 
 	reg [3:0]r_xstate, r_rstate;
 	reg [1:0]r_xcnt, r_rcnt;
+	reg		 r_x_invert, r_r_invert;
 
 	reg r_r_int, r_x_int;
 	assign interrupt = r_r_int|r_x_int;
@@ -36,18 +37,20 @@ module uart(input clk, input reset,
 	always @(posedge clk)
 		r_r <= rx;
 
+	wire r = r_r^r_r_invert;
+
 	always @(posedge clk)
 	if (reset) begin
 		r_rstate <= 0;
 	end else
 	case (r_rstate) 
-	0:	if (!r_r) begin
+	0:	if (!r) begin
 			r_rstate <= 1;
 			r_rcnt <= 1;
 		end
 	1:	if (is_zero) begin
 			if (r_rcnt == 0) begin
-				if (!r_r) begin
+				if (!r) begin
 					r_rstate <= 2;
 					r_rcnt <= 3;
 				end else begin
@@ -60,7 +63,7 @@ module uart(input clk, input reset,
 	2, 3, 4, 5, 6, 7, 8:
 		if (is_zero) begin
 			if (r_rcnt == 0) begin
-				r_ib <= {r_r,r_ib[6:1]};
+				r_ib <= {r,r_ib[6:1]};
 				r_rstate <= r_rstate+1;
 				r_rcnt <= 3;
 			end else begin
@@ -69,7 +72,7 @@ module uart(input clk, input reset,
 		end
 	9:	if (is_zero) begin
 			if (r_rcnt == 0) begin
-				r_in <= {r_r, r_ib};
+				r_in <= {r, r_ib};
 				r_rcnt <= 3;
 				r_rstate <= 10;
 			end else begin
@@ -103,11 +106,12 @@ module uart(input clk, input reset,
 	always @(posedge clk)
 	if (reset) begin
 		r_xstate <= 0;
-		r_x <= 1;
+		r_x <= 1^r_x_invert;
 		r_x_int <= 0;
 	end else
 	case (r_xstate)
 	0: if (io_write) begin
+			r_x <= 1^r_x_invert;
 			case (io_addr) 
 			1:	begin
 					r_xstate <= 1;
@@ -120,10 +124,12 @@ module uart(input clk, input reset,
 				end
 			default:;
 			endcase
+		end else begin
+			r_x <= 1^r_x_invert;
 		end
 	1:  if (is_zero) begin
 			r_xcnt <= 3;
-			r_x <= 0;// start bit
+			r_x <= 0^r_x_invert;// start bit
 			r_xstate <= 2;
 		end
 	2, 3, 4, 5, 6, 7, 8, 9: 
@@ -131,7 +137,7 @@ module uart(input clk, input reset,
 		if (r_xcnt == 0) begin
 			r_xstate <= r_xstate+1;
 			r_xcnt <= 3;
-			r_x <= r_out[0];
+			r_x <= r_out[0]^r_x_invert;
 			r_out <= {1'bx, r_out[7:1]};
 		end else begin
 			r_xcnt <= r_xcnt-1;
@@ -140,7 +146,7 @@ module uart(input clk, input reset,
 		if (r_xcnt == 0) begin
 			r_xstate <= 11;
 			r_xcnt <= 3;
-			r_x <= 1;
+			r_x <= 1^r_x_invert;
 			r_x_int <= 1;
 		end else begin
 			r_xcnt <= r_xcnt-1;
@@ -152,6 +158,7 @@ module uart(input clk, input reset,
 		end else begin
 			if (io_write && io_addr == 2 && io_wdata[0])
 				r_x_int <= 0;
+			r_x <= 1^r_x_invert;
 			if (is_zero)
 			if (r_xcnt == 0) begin
 				r_xstate <= 0;
@@ -159,11 +166,14 @@ module uart(input clk, input reset,
 				r_xcnt <= r_xcnt-1;
 			end
 		end
-	12: if (is_zero)
-		if (r_xcnt == 0) begin
-			r_xstate <= 1;
-		end else begin
-			r_xcnt <= r_xcnt-1;
+	12: begin
+			r_x <= 1^r_x_invert;
+			if (is_zero)
+			if (r_xcnt == 0) begin
+				r_xstate <= 1;
+			end else begin
+				r_xcnt <= r_xcnt-1;
+			end
 		end
 	default:;
 	endcase
@@ -172,6 +182,7 @@ module uart(input clk, input reset,
 		case (io_addr) 
 		0: io_rdata = r_in;
 		2: io_rdata = {6'b0, r_r_int, r_x_int};
+		3: io_rdata = {6'b0, r_r_invert, r_x_invert};
 		4: io_rdata = r_div_value[7:0];
 		5: io_rdata = {4'b0,r_div_value[11:8]};
 		default: io_rdata = 8'bx;	
@@ -181,9 +192,12 @@ module uart(input clk, input reset,
 	always @(posedge clk)
 	if (reset) begin
 		r_div_value <= 1; //CLOCK/BAUD/4;	// 1 for testing
+		r_r_invert <= 0;
+		r_x_invert <= 0;
 	end else
 	if (io_write) begin
 		case (io_addr)
+		3:  begin r_r_invert <= io_wdata[1]; r_x_invert <= io_wdata[0]; end
 		4:	r_div_value[7:0] <= io_wdata;
 		5:	r_div_value[11:8] <= io_wdata[3:0];
 		default: ;
