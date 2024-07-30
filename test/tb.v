@@ -69,6 +69,12 @@ module tb ();
 				   .io2(b[2]),
 				   .io3(b[3]));
 
+	spiflash #(.FILENAME(""))ram2(.csb(uo_out[7]),
+			           .clk(uo_out[2]),
+				   .io0(b[0]),
+				   .io1(b[1]),
+				   .io2(b[2]),
+				   .io3(b[3]));
 	wire tx=uo_out[6];
 	reg [7:0]c;
 	reg uart_done;

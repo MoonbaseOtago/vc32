@@ -25,7 +25,8 @@ module mmu(input clk,  input reset, input is_pc, input is_write, input mmu_enabl
 	reg				     r_fault_valid;
 	reg				     r_fault_write;
 	reg				     r_fault_ins;
-	assign reg_read =  {r_fault_address, {(RV-(VA-UNTOUCHED)-3){1'b0}}, r_fault_ins, r_fault_write, r_fault_valid};
+	reg				     r_fault_data;
+	assign reg_read =  {r_fault_address, {(RV-(VA-UNTOUCHED)-5){1'b0}}, r_fault_ins, r_fault_data, r_fault_write, r_fault_valid, 1'b0};
 
 	wire  [VA-1:RV/16]taddr = (!is_write&&is_pc? pcv: addrv);
 
@@ -36,22 +37,37 @@ module mmu(input clk,  input reset, input is_pc, input is_write, input mmu_enabl
 		r_fault_ins <= 0;
 	end else
 	if (mmu_fault) begin
-		r_fault_valid <= !mmu_miss_fault;
-		r_fault_write <= is_write;
-		r_fault_ins <= is_pc;
-		r_fault_address <= taddr[VA-1: UNTOUCHED];
 	end
 
 //
 //	mmu reg
 //
-//	upper bits address
+//	write virt:
 //
-//	6 - I=1, D=0
-//  5 - S-1, U=0
-//	4:2	address map
-//  1 - writeable
-//	0 - valid
+//	15-X upper bits phys address
+//  2 - writeable
+//	1 - valid
+//  0 - 1
+//
+//	write phys:
+
+//	15-X upper bits virtual fault address
+//	4	fault_ins
+//	3	fault_data
+//	2	fault_write
+//	1	fault_valid
+//	0 - 0
+//
+//	read:
+//
+//	15-X upper bits virtual fault address
+//	4	fault_ins
+//	3	fault_data
+//	2	fault_write
+//	1	fault_valid
+//	0   0
+//
+//	
 
 	reg [4*NMMU-1:0]r_valid;
 	reg [2*NMMU-1:0]r_writeable;
@@ -63,18 +79,38 @@ module mmu(input clk,  input reset, input is_pc, input is_write, input mmu_enabl
 
 	assign addrp = {(mmu_enable ? r_vtop[sel]:{{PA-RV{1'b0}}, taddr[VA-1:UNTOUCHED]}), taddr[UNTOUCHED-1:RV/16]};
 
-	wire [$clog2(NMMU)+1:0]reg_addr = reg_data[$clog2(NMMU)+4-1:2];
+	wire [$clog2(NMMU)+1:0]reg_addr = {r_fault_ins, r_fault_data, r_fault_address[VA-1:UNTOUCHED]};;
+wire [PA-1:UNTOUCHED]vtop = r_vtop[sel];
+wire [PA-1:UNTOUCHED]vtop_3_00 = r_vtop['h30];
 	always @(posedge clk)
 	if (reset) begin
 		r_valid <= 0;
+		r_fault_valid <= 0;
+		r_fault_write <= 0;
+		r_fault_ins <= 0;
+		r_fault_data <= 0;
+	end else
+	if (mmu_fault) begin
+		r_fault_address <= taddr[VA-1:UNTOUCHED];
+		r_fault_valid <= !mmu_miss_fault;
+		r_fault_write <= is_write;
+		r_fault_ins <= is_pc|(supmode&mmu_i_proxy);
+		r_fault_data <= supmode&~mmu_d_proxy;
 	end else
 	if (reg_write) begin
-		r_vtop[reg_addr] <= reg_data[RV-1:RV-(PA-UNTOUCHED)];
-		r_valid[reg_addr] <= reg_data[0];
-		if (!reg_addr[$clog2(NMMU)+1])
-			r_writeable[reg_addr[$clog2(NMMU):0]] <= reg_data[1];
-	end
-	
+		if (reg_data[0]) begin
+			r_vtop[reg_addr] <= reg_data[RV-1:RV-(PA-UNTOUCHED)];
+			r_valid[reg_addr] <= reg_data[1];
+			if (!r_fault_ins)
+				r_writeable[reg_addr[$clog2(NMMU):0]] <= reg_data[2];
+		end else begin
+			r_fault_address <= reg_data[VA-1:UNTOUCHED];
+			r_fault_valid <= reg_data[1];
+			r_fault_write <= reg_data[2];
+			r_fault_data <= reg_data[3];
+			r_fault_ins <= reg_data[4];
+		end
+	end 
 endmodule
 
 /* For Emacs:

@@ -81,13 +81,12 @@ module vc(input clk, input reset,
 		);
 
 	parameter RV=16;
-	parameter PA=22;
+	parameter PA=24;
 	parameter VA=RV;
 	parameter MMU=1;
 	parameter NMMU=16;
 
 	assign uo_out[2] = clk;
-assign uo_out[7]=0;
 assign uo_out[5:3]=0;
 assign uio_out[7:4]=0;
 assign uio_oe[7:4]=0;
@@ -205,9 +204,9 @@ assign uio_oe[7:4]=0;
 		.iready(iready),
 		.rstrobe(rstrobe),
 		.idone(idone),
-		.rdone(io_access?io_rdone:rdone),
+		.rdone(rdone),
 		.wmask(wmask),
-		.wdone(io_access?io_wdone:wdone),
+		.wdone(wdone),
 		.io_access(io_access),
 		.addr(addr),
 		.wdata(wdata),
@@ -256,14 +255,14 @@ assign uio_oe[7:4]=0;
 	parameter D_NLINES=8;  // number of lines
 
 	wire i_hit, i_pull;
-	wire d_hit, d_push, d_pull;
+	wire d_hit, d_push, d_pull, d_wdone;
 	wire d_rstrobe_d, d_wstrobe_d, i_wstrobe_d;
 	wire [PA-1:$clog2(LINE_LENGTH)]d_tag, i_tag;
 	wire [3:0]dwrite;
 	wire [PA-1:1]phys_addr = addrp; // {addrp, |wmask|| |rstrobe? addr[$clog2(LINE_LENGTH)-1:RV/16]: pc[$clog2(LINE_LENGTH)-1:RV/16]};
 
 	assign rdone =  |rstrobe && (io_access ? io_rdone : d_hit && !(d_pull|d_push)) && !fault;
-	assign wdone =  |wmask &&   (io_access ? io_wdone : (d_hit && !(d_pull|d_push)) || (!d_push&&flush_write)) && !fault;
+	assign wdone =  |wmask &&   (io_access ? io_wdone : ((d_hit && (!(d_pull|d_push)))|d_wdone) || (!d_push&&flush_write)) && !fault;
 
 
 	icache #(.PA(PA), .LINE_LENGTH(LINE_LENGTH), .RV(RV), .NLINES(I_NLINES))icache(.clk(clk), .reset(reset),
@@ -297,6 +296,7 @@ assign uio_oe[7:4]=0;
 		.hit(d_hit),
 		.push(d_push),	// if not hit we need to write a line
 		.pull(d_pull),	// if not hit we need to read a line
+		.wdone(d_wdone),
 		.tag(d_tag),
 		.rdata(rdata));
 
@@ -304,10 +304,19 @@ assign uio_oe[7:4]=0;
 
 	wire uart_intr;
 
+	reg [1:0]mem;
+	always @(*) begin
+		if (rom_enable && (ifetch || !d_push)) begin
+			mem = 1;
+		end else begin
+			mem = addr[23]? 2:0;
+		end
+	end
+
 	qspi  #(.RV(RV), .LINE_LENGTH(LINE_LENGTH), .PA(PA))qspi(.clk(clk), .reset(reset),
 		    .uio_oe(uio_oe[3:0]),
             .uio_out(uio_out[3:0]),
-            .cs(uo_out[1:0]),
+            .cs({uo_out[7], uo_out[1:0]}),
 
             .req((ifetch&i_pull)|(((|rstrobe || |wmask)&(d_pull|d_push))&!io_access)),
             .i_d(ifetch),

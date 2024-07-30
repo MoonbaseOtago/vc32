@@ -13,7 +13,7 @@ module tt_um_vc32_cpu #( parameter MAX_COUNT = 24'd10_000_000 ) (
 
 	parameter RV=16;
 	parameter VA=16;
-	parameter PA=22;
+	parameter PA=24;
 	parameter MMU=1;
 	parameter NMMU=16;
 	

@@ -331,14 +331,22 @@ b12:				// should be 12
 
 
 // turn off mmu
-	li	a0, 32
+	li	a2, 1	// not valid
+	li	a0, 0
+	li	a1, 0
+	li	a4, 4
+	lui	a3, 0x1000
+lp2:
+		add	a4, -1
+		li	a0, 16
 lp1:
-		add 	a0, -1
-		mv	a1, a0
-		sll	a1
-		sll	a1
-		mv	mmu, a1
-		bnez	a0, lp1
+			add 	a0, -1
+			mv	mmu, a1
+			mv	mmu, a2
+			add	a1, a3
+			bnez	a0, lp1
+		add	a1, 1<<3
+		bnez    a4, lp2
 //
 
 	mv	a0, csr		// set user_io
@@ -388,8 +396,8 @@ r2:
 sc:	syscall					// goes to syscall1
 r3:	li	a0, 0x1a	
 	jal     send            // 1a
-	mv	a0, csr
-	jal	send		// 80
+	//mv	a0, csr
+	//jal	send		// 80
 	
 	la	a0, syscall2
 	la	a1, syscall_vector
@@ -439,7 +447,7 @@ syscall2:
 	zext	a1
 	or	a0, a1
 	mv	mmu, a0
-	jal     send		// 0x3c7
+	jal     send		// 0xc7
 
 // turn on MMU
 	mv	a0, csr

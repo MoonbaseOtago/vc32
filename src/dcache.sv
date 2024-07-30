@@ -20,6 +20,7 @@ module dcache(input clk, input reset,
 		output  reg hit,
 		output  reg push,	// if not hit we need to write a line
 		output  reg pull,	// if not hit we need to read a line
+		output  reg wdone,
 		output  reg [PA-1:$clog2(LINE_LENGTH)]tag,
 		output  reg[RV-1:0]rdata);
 
@@ -112,12 +113,23 @@ module dcache(input clk, input reset,
 
 			always @(posedge clk)
 			if (pindex == L) 
-			if (|write && hit && !fault && (!pull || !push)) begin
+			if (|write && hit && !fault && (!pull && !push)) begin
 				r_dirty[L] <= 1;
 			end else
-			if (rstrobe_d&&(r_offset == (LINE_LENGTH*2-1))) begin
-				r_dirty[L] <= |write && !flush_write;
+			if (r_offset == (LINE_LENGTH*2-1)) begin
+				casex ({rstrobe_d, wstrobe_d}) // synthesis full_case
+				2'b10: r_dirty[L] <= 0;
+				2'b01: r_dirty[L] <= |write && !flush_write;
+				2'b00:;
+				endcase
 			end
+
+			always @(*) begin
+				wdone = 0;
+				if (!reset && |write && !fault && (wstrobe_d && r_offset == (2*LINE_LENGTH-1))) 
+					wdone = 1;
+			end
+
 
 			for (N = 0; N < LINE_LENGTH*2; N=N+1) begin
 				always @(posedge clk)

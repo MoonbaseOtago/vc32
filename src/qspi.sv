@@ -6,11 +6,11 @@
 module qspi(input clk, input reset,
 			output [3:0]uio_oe,	
 			output [3:0]uio_out,	
-			output [1:0]cs,
+			output [2:0]cs,
 
 			input	    req,
 			input	    i_d,
-			input		mem,
+			input	[1:0]mem,
 			input		write,
 			input [PA-1:$clog2(LINE_LENGTH)]paddr,
 
@@ -31,7 +31,7 @@ module qspi(input clk, input reset,
 	reg      [1:0]r_quad;
 	reg      [1:0]r_mask;
 
-	reg		[1:0]r_cs, c_cs;	
+	reg		[2:0]r_cs, c_cs;	
 	reg		[3:0]r_uio_out, c_uio_out;
 	reg		[1:0]r_uio_oe, c_uio_oe;
 	reg			 r_ind, c_ind;
@@ -62,7 +62,7 @@ module qspi(input clk, input reset,
 
 		always @(posedge clk) begin
 			r_state <= (reset? 0:c_state);
-			r_cs <= (reset? 2'b11:c_cs);	
+			r_cs <= (reset? 3'b111:c_cs);	
 			r_uio_out <= c_uio_out;
 			r_uio_oe <= (reset?0:c_uio_oe);
 			r_count <= c_count;
@@ -166,7 +166,7 @@ module qspi(input clk, input reset,
 			   end
 			16:begin
 					c_state = 31;
-					c_cs = 2'b11;
+					c_cs = 3'b111;
 					c_uio_oe = 2'b00;
 			   end
 			17:begin
@@ -194,7 +194,7 @@ module qspi(input clk, input reset,
 			   end
 			20:begin
 					if (r_count == 0) begin
-						c_cs = 2'b11;
+						c_cs = 3'b111;
 						c_state = 31;
 					end else begin
 						c_wstrobe_i = i_d;
@@ -204,7 +204,7 @@ module qspi(input clk, input reset,
 			   end
 
 			0: begin
-					c_cs = r_ind? 2'b10: 2'b00;	// send ab to power up then optionally 35 to 0 to go into quad mode
+					c_cs = r_ind? 3'b010: 3'b000;	// send ab to power up then optionally 35 to 0 to go into quad mode
 					c_uio_oe = 2'b01;
 					c_uio_out = {3'bxxx, ~r_ind};
 					c_count = 6;
@@ -221,7 +221,7 @@ module qspi(input clk, input reset,
 					c_state = (r_ind?31:0);
 					c_ind = 1;
 					c_uio_oe = 2'b00;
-					c_cs = 2'b11;
+					c_cs = 3'b111;
 			   end
 			endcase
 		end
