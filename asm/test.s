@@ -426,28 +426,18 @@ syscall2:
 //	map I/D sup pages 1:1
 //
 //
-	li	a0, 0x60	// S I #0
+	li	a0, 0x18	// S I #0
 	mv	mmu, a0
-	li	a0, 0x3		// V ->0 
+	li	a0, 0x3		// V ->1 
 	mv	mmu, a0
 	jal	send		//0x3 #0
 
-	li	a0, 0x20	// S D #0
+	li	a0, 0x08	// S D #0
 	mv	mmu, a0
-	li	a0, 0x07	// V W ->0 
+	li	a0, 0x07	// V W ->1 
 	mv	mmu, a0
 	jal	send		//0x7
 
-
-	li	a0, 0x3e	// S D #f
-	mv	mmu, a0
-
-	lui	a0, 0x0300
-	li	a1, 0xffc7	// V W ->0xf
-	zext	a1
-	or	a0, a1
-	mv	mmu, a0
-	jal     send		// 0xc7
 
 // turn on MMU
 	mv	a0, csr

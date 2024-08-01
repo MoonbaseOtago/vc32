@@ -25,8 +25,8 @@ module mmu(input clk,  input reset, input is_pc, input is_write, input mmu_enabl
 	reg				     r_fault_valid;
 	reg				     r_fault_write;
 	reg				     r_fault_ins;
-	reg				     r_fault_data;
-	assign reg_read =  {r_fault_address, {(RV-(VA-UNTOUCHED)-5){1'b0}}, r_fault_ins, r_fault_data, r_fault_write, r_fault_valid, 1'b0};
+	reg				     r_fault_sup;
+	assign reg_read =  {r_fault_address, {(RV-(VA-UNTOUCHED)-5){1'b0}}, r_fault_ins, r_fault_sup, r_fault_write, r_fault_valid, 1'b0};
 
 	wire  [VA-1:RV/16]taddr = (!is_write&&is_pc? pcv: addrv);
 
@@ -53,7 +53,7 @@ module mmu(input clk,  input reset, input is_pc, input is_write, input mmu_enabl
 
 //	15-X upper bits virtual fault address
 //	4	fault_ins
-//	3	fault_data
+//	3	fault_sup
 //	2	fault_write
 //	1	fault_valid
 //	0 - 0
@@ -62,7 +62,7 @@ module mmu(input clk,  input reset, input is_pc, input is_write, input mmu_enabl
 //
 //	15-X upper bits virtual fault address
 //	4	fault_ins
-//	3	fault_data
+//	3	fault_sup
 //	2	fault_write
 //	1	fault_valid
 //	0   0
@@ -79,7 +79,7 @@ module mmu(input clk,  input reset, input is_pc, input is_write, input mmu_enabl
 
 	assign addrp = {(mmu_enable ? r_vtop[sel]:{{PA-RV{1'b0}}, taddr[VA-1:UNTOUCHED]}), taddr[UNTOUCHED-1:RV/16]};
 
-	wire [$clog2(NMMU)+1:0]reg_addr = {r_fault_ins, r_fault_data, r_fault_address[VA-1:UNTOUCHED]};;
+	wire [$clog2(NMMU)+1:0]reg_addr = {r_fault_ins, r_fault_sup, r_fault_address[VA-1:UNTOUCHED]};;
 wire [PA-1:UNTOUCHED]vtop = r_vtop[sel];
 wire [PA-1:UNTOUCHED]vtop_3_00 = r_vtop['h30];
 	always @(posedge clk)
@@ -88,14 +88,14 @@ wire [PA-1:UNTOUCHED]vtop_3_00 = r_vtop['h30];
 		r_fault_valid <= 0;
 		r_fault_write <= 0;
 		r_fault_ins <= 0;
-		r_fault_data <= 0;
+		r_fault_sup <= 0;
 	end else
 	if (mmu_fault) begin
 		r_fault_address <= taddr[VA-1:UNTOUCHED];
 		r_fault_valid <= !mmu_miss_fault;
 		r_fault_write <= is_write;
 		r_fault_ins <= is_pc|(supmode&mmu_i_proxy);
-		r_fault_data <= supmode&~mmu_d_proxy;
+		r_fault_sup <= supmode&~mmu_d_proxy;
 	end else
 	if (reg_write) begin
 		if (reg_data[0]) begin
@@ -107,7 +107,7 @@ wire [PA-1:UNTOUCHED]vtop_3_00 = r_vtop['h30];
 			r_fault_address <= reg_data[VA-1:UNTOUCHED];
 			r_fault_valid <= reg_data[1];
 			r_fault_write <= reg_data[2];
-			r_fault_data <= reg_data[3];
+			r_fault_sup <= reg_data[3];
 			r_fault_ins <= reg_data[4];
 		end
 	end 
