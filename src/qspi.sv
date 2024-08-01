@@ -27,9 +27,9 @@ module qspi(input clk, input reset,
 	parameter PA=24;
 	parameter RV=16;
 
-	reg [3:0]r_read_delay[0:1];
-	reg      [1:0]r_quad;
-	reg      [1:0]r_mask;
+	reg [3:0]r_read_delay[0:2];
+	reg      [2:0]r_quad;
+	reg      [2:0]r_mask;
 
 	reg		[2:0]r_cs, c_cs;	
 	reg		[3:0]r_uio_out, c_uio_out;
@@ -45,13 +45,14 @@ module qspi(input clk, input reset,
 		if (reset) begin
 			r_read_delay[0] <= 5;	// 6 clocks for RAM 
 			r_read_delay[1] <= 4;	// 5 clocks for ROM
-			r_mask <= 2'b10;
-			r_quad <= 2'b01;
+			r_read_delay[2] <= 5;	// 6 clocks for RAM 
+			r_mask <= 3'b010;
+			r_quad <= 3'b101;
 		end else
-		if (reg_write) begin
-			r_read_delay[reg_addr[0]] <= reg_data[3:0];
-			r_mask[reg_addr[0]] <= reg_data[7];
-			r_quad[reg_addr[0]] <= reg_data[6];
+		if (reg_write && reg_addr[1:0] != 3) begin
+			r_read_delay[reg_addr[1:0]] <= reg_data[3:0];
+			r_mask[reg_addr[1:0]] <= reg_data[7];
+			r_quad[reg_addr[1:0]] <= reg_data[6];
 		end
 
 		reg [4:0]r_state, c_state;
