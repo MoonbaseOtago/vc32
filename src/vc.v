@@ -309,7 +309,7 @@ assign uio_oe[7:4]=0;
 		if (rom_enable && (ifetch || !d_push)) begin
 			mem = 1;
 		end else begin
-			mem = addr[23]? 2:0;
+			mem = phys_addr[23]? 2:0;
 		end
 	end
 
