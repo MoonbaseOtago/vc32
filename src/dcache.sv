@@ -112,11 +112,10 @@ module dcache(input clk, input reset,
 				r_valid[L] <= 1;
 
 			always @(posedge clk)
-			if (pindex == L) 
-			if (|write && hit && !fault && (!pull && !push)) begin
+			if (|write && hit && !fault && (!pull && !push) && pindex == L) begin
 				r_dirty[L] <= 1;
 			end else
-			if (r_offset == (LINE_LENGTH*2-1)) begin
+			if (r_offset == (LINE_LENGTH*2-1) && pindex == L) begin
 				case ({rstrobe_d, wstrobe_d}) 
 				2'b10: r_dirty[L] <= 0;
 				2'b01: r_dirty[L] <= |write && !flush_write;
@@ -133,8 +132,7 @@ module dcache(input clk, input reset,
 
 			for (N = 0; N < LINE_LENGTH*2; N=N+1) begin
 				always @(posedge clk)
-				if (pindex == L) 
-				if (|write && !fault && ((hit && (!pull || !push)) || (wstrobe_d && r_offset == (2*LINE_LENGTH-1))) && (write != 2'b11 ? {paddr[1], write[1]} == N[2:1] : paddr[1] == N[2])) begin
+				if (|write && pindex == L && !fault && ((hit && (!pull || !push)) || (wstrobe_d && r_offset == (2*LINE_LENGTH-1))) && (write != 2'b11 ? {paddr[1], write[1]} == N[2:1] : paddr[1] == N[2])) begin
 					casez ({write, N[1:0]}) // synthesis full_case parallel_case
 					4'b01_?0: r_data[L][N*4+3:N*4] <= wdata[3:0];
 					4'b10_?0: r_data[L][N*4+3:N*4] <= wdata[3:0];
@@ -147,7 +145,7 @@ module dcache(input clk, input reset,
 					default:  ;
 					endcase
 				end else
-				if (wstrobe_d && r_offset == (N^1)) begin
+				if (wstrobe_d && r_offset == (N^1) && pindex == L) begin
 					r_data[L][N*4+3:N*4] <= dread;
 				end
 			end
