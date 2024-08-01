@@ -30,15 +30,6 @@ module mmu(input clk,  input reset, input is_pc, input is_write, input mmu_enabl
 
 	wire  [VA-1:RV/16]taddr = (!is_write&&is_pc? pcv: addrv);
 
-	always @(posedge clk)
-	if (reset) begin
-		r_fault_valid <= 0;
-		r_fault_write <= 0;
-		r_fault_ins <= 0;
-	end else
-	if (mmu_fault) begin
-	end
-
 //
 //	mmu reg
 //
