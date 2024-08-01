@@ -12,7 +12,7 @@ module vcxx #( parameter MAX_COUNT = 24'd10_000_000 ) (
 );
 
 	wire clk_out;
-	clk_wiz_0(.clock_in1(clk), .reset(~rst_n), .clock_out1(clk_out));
+	clk_wiz_0 clks(.clock_in1(clk), .reset(~rst_n), .clock_out1(clk_out));
 
 	wire [7:0]uio_out;
 	wire [7:0]uio_oe;

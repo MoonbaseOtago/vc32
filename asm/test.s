@@ -446,35 +446,54 @@ syscall2:
 xx:
 	jal	send		// 0x8c
 
-	jal fail
+	li	a2, 0xffdf
+	sext	a2
+	mv	a0, a2
+	jal	send		// 0xdf
+	swap	a0, a2
+	jal	send		// 0xff
 
-	li	a0, 0xffdf
-	sext	a0
-	sw	a0, (a5)        // 0xffdf
-	zext	a0
-	sw	a0, (a5)        // 0xdf
+	zext	a2
+	mv	a0, a2
+	jal	send		// 0xdf
+	swap	a0, a2
+	jal	send		// 0x0
+
 	li	a0, 8
 	mv	sp, a0
 	li	a0, 16
 	mv	stmp, a0
 	swapsp
 	mv	a0, sp
-	sw	a0, (a5)        // 16
+	jal	send		// 16
 	mv	a0, stmp
-	sw	a0, (a5)        // 8
+	jal	send		// 8
 
-	lui	a0, 0xff00	// tests for the new lui
-	sw	a0, (a5)        // ff00
-	lui	a0, 0x8000
-	sw	a0, (a5)        // 8000
-	lui	a0, 0x7f00
-	sw	a0, (a5)        // 7f00
+
+	lui	a2, 0xff00	// tests for the new lui
+	mv	a0, a2
+	jal	send		// 0x00
+	swap	a0, a2
+	jal	send		// 0xff
+	lui	a2, 0x8000
+	mv	a0, a2
+	jal	send		// 0x00
+	swap	a0, a2
+	jal	send		// 0x60
+	lui	a2, 0x7f00
+	mv	a0, a2
+	jal	send		// 0x00
+	swap	a0, a2
+	jal	send		// 0x7f
+
 
 	la	a0, loc
 	li	a1, 0x65
 	sb	a1, (a0)
-	lb	a2, (a0)	// ck that load/store work thru mmu
-	sw	a2, (a5)        // 0x65
+	lb	a0, (a0)	// ck that load/store work thru mmu
+	jal	send		// 0x65
+
+	jal fail
 	
 
 	li	a1, 0x20	// S D #0

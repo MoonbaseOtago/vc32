@@ -17,11 +17,11 @@ module dcache(input clk, input reset,
 		output	reg[3:0]dwrite,
 		input		 rstrobe_d,
 
-		output  reg hit,
-		output  reg push,	// if not hit we need to write a line
-		output  reg pull,	// if not hit we need to read a line
-		output  reg wdone,
-		output  reg [PA-1:$clog2(LINE_LENGTH)]tag,
+		output  hit,
+		output  push,	// if not hit we need to write a line
+		output  pull,	// if not hit we need to read a line
+		output  wdone,
+		output  [PA-1:$clog2(LINE_LENGTH)]tag,
 		output  reg[RV-1:0]rdata);
 
 	parameter LINE_LENGTH=4;  // cache line length (in bytes)
@@ -41,19 +41,20 @@ module dcache(input clk, input reset,
 		reg [$clog2(LINE_LENGTH*2)-1:0]r_offset, c_offset;
 		genvar L, N; 
 
-		reg match, valid, dirty;
+		wire match, valid, dirty;
 
 		wire [$clog2(NLINES)-1:0]pindex = paddr[$clog2(LINE_LENGTH*NLINES)-1:$clog2(LINE_LENGTH)];
 		wire [PA-1:$clog2(LINE_LENGTH*NLINES)]ptag = paddr[PA-1:$clog2(LINE_LENGTH*NLINES)];
 
+		assign match = r_tag[pindex] == ptag;
+		assign valid = r_valid[pindex];
+		assign dirty = r_dirty[pindex];
+		assign hit = valid && match;
+		assign push = valid && dirty && !fault && (flush_write ? 1 : !match);
+		assign pull = !hit && !push;
+		assign tag = {pull?ptag:r_tag[pindex], pindex};
+
 		always @(*) begin 
-			match = r_tag[pindex] == ptag;
-			valid = r_valid[pindex];
-			dirty = r_dirty[pindex];
-			hit = valid && match;
-			push = valid && dirty && !fault && (flush_write ? 1 : !match);
-			pull = !hit && !push;
-			tag = {pull?ptag:r_tag[pindex], pindex};
 			c_offset = wstrobe_d|rstrobe_d ? r_offset+1 : 0;
 		end
 
@@ -77,7 +78,7 @@ module dcache(input clk, input reset,
 			if (LINE_LENGTH == 4) begin
 				always @(*)
 				if (read != 2'b11) begin
-					case({paddr[1],read[1]})
+					case ({paddr[1],read[1]})
 					0: rdata = {8'bx, r_data[pindex][7:0]};
 					1: rdata = {8'bx, r_data[pindex][15:8]};
 					2: rdata = {8'bx, r_data[pindex][23:16]};
@@ -123,11 +124,7 @@ module dcache(input clk, input reset,
 				endcase
 			end
 
-			always @(*) begin
-				wdone = 0;
-				if (!reset && |write && !fault && (wstrobe_d && r_offset == (2*LINE_LENGTH-1))) 
-					wdone = 1;
-			end
+			assign wdone = !reset && |write && !fault && (wstrobe_d && r_offset == (2*LINE_LENGTH-1));
 
 
 			for (N = 0; N < LINE_LENGTH*2; N=N+1) begin
