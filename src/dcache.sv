@@ -113,18 +113,18 @@ module dcache(input clk, input reset,
 				r_valid[L] <= 1;
 
 			always @(posedge clk)
-			if (|write && hit && !fault && (!pull && !push) && pindex == L) begin
+			if (pindex == L)
+			if (|write && hit && !fault && (!pull && !push)) begin
 				r_dirty[L] <= 1;
 			end else
-			if (r_offset == (LINE_LENGTH*2-1) && pindex == L) begin
-				case ({rstrobe_d, wstrobe_d}) 
-				2'b10: r_dirty[L] <= 0;
-				2'b01: r_dirty[L] <= |write && !flush_write;
-				default:;
-				endcase
+			if (rstrobe_d && (r_offset == (LINE_LENGTH*2-1))) begin
+				r_dirty[L] <= 0;
+			end else
+			if (wstrobe_d && (r_offset == (LINE_LENGTH*2-1))) begin
+				r_dirty[L] <= |write && !flush_write;
 			end
 
-			assign wdone = !reset && |write && !fault && (wstrobe_d && r_offset == (2*LINE_LENGTH-1));
+			assign wdone = !reset && |write && !fault && (wstrobe_d && (r_offset == (2*LINE_LENGTH-1)));
 
 
 			for (N = 0; N < LINE_LENGTH*2; N=N+1) begin
