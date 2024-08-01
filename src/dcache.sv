@@ -117,7 +117,7 @@ module dcache(input clk, input reset,
 				r_dirty[L] <= 1;
 			end else
 			if (r_offset == (LINE_LENGTH*2-1)) begin
-				casex ({rstrobe_d, wstrobe_d}) // synthesis full_case parallel_case
+				case ({rstrobe_d, wstrobe_d}) 
 				2'b10: r_dirty[L] <= 0;
 				2'b01: r_dirty[L] <= |write && !flush_write;
 				default:;
