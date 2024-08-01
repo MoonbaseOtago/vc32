@@ -320,7 +320,7 @@ assign uio_oe[7:4]=0;
 
             .req((ifetch&i_pull)|(((|rstrobe || |wmask)&(d_pull|d_push))&!io_access)),
             .i_d(ifetch),
-            .mem(rom_enable && (ifetch || !d_push)),  
+            .mem(mem),  
             .write(!ifetch && d_push),
             .paddr(ctag),
 
