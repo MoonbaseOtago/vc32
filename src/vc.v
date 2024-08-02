@@ -103,6 +103,9 @@ assign uio_oe[7:4]=0;
 	wire		mmu_i_proxy, mmu_d_proxy;
 	wire		mmu_miss_fault, mmu_prot_fault;
 	wire		mmu_fault;
+	wire		ifetch;
+	wire		is_read = (|rstrobe) && ~io_access;
+	wire		is_write = (|wmask) && ~io_access;
 	generate
 		if (MMU == 0) begin
 			assign addrp = |wmask|| |rstrobe?addr[VA-1:RV/16]:pc[VA-1:RV/16];
@@ -112,8 +115,9 @@ assign uio_oe[7:4]=0;
 						.mmu_enable(mmu_enable),
 						.mmu_i_proxy(mmu_i_proxy),
 						.mmu_d_proxy(mmu_d_proxy),
-						.is_pc(~|rstrobe && ~|wmask),
-						.is_write(|wmask),
+						.is_pc(ifetch),
+						.is_read(is_read),
+						.is_write(is_write),
 						.pcv(pc[VA-1:RV/16]),
 						.addrv(addr[VA-1:RV/16]),
 						.addrp(addrp),
@@ -146,7 +150,6 @@ assign uio_oe[7:4]=0;
 	wire [VA-1:RV/16]addr;
 	wire [15:0]ins;
 	wire		 iready;
-	wire		 ifetch;
 `ifdef MULT
 	wire		 mult;
 `endif

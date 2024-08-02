@@ -10,7 +10,7 @@ begin:
 	.=16
 	j	mmu_trap
 mmu_vector:
-	.word	0
+	.word	fail
 mmu_trap:
 	la	a2, mmu_vector
 	lw	a2, (a2)
@@ -488,22 +488,22 @@ xx:
 	jal	send		// 0x7f
 
 
-	la	a0, loc
+	la	a2, loc
 	li	a1, 0x65
-	sb	a1, (a0)
-	lb	a0, (a0)	// ck that load/store work thru mmu
+	sb	a1, (a2)
+	lb	a0, (a2)	// ck that load/store work thru mmu
+	jal	send		// 0x65
+
+	li	a0, 0x08	// S D #0
+	mv	mmu, a0
+	li	a0, 0x03	// V W ->1 
+	mv	mmu, a0
+	jal	send		// 0x3
+
+	lb	a0, (a2)	// ck that load works thru mmu read only
 	jal	send		// 0x65
 
 	jal fail
-	
-
-	li	a1, 0x20	// S D #0
-	mv	mmu, a1
-	li	a1, 0x21	// V S D  #0->0 
-	mv	mmu, a1
-	sw	a1, (a5)        // 0x21
-	lb	a1, (a0)	// ck that load works thru mmu read only
-	sw	a1, (a5)        // 0x65
 
 	la	a1, mmu_vector
 	la	a2, wrt
