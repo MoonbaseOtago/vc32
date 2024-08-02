@@ -50,7 +50,6 @@ module execute(input clk, input reset,
 		input			rdone,
 		input	[RV-1:0]rdata,
 		output		    fault,
-		output			rom_enable,
 		input			do_flush_all,
 		input			do_flush_write,
 		output			i_flush_all,
@@ -133,7 +132,7 @@ module execute(input clk, input reset,
 
 	wire sup_enabled;
 
-	wire [RV-1:0]csr = {{(RV-8){1'b0}}, user_io, r_rom_enable, mmu_i_proxy, mmu_d_proxy, mmu_enable, sup_enabled, r_prev_ie, r_ie};
+	wire [RV-1:0]csr = {{(RV-8){1'b0}}, user_io, 1'b0, mmu_i_proxy, mmu_d_proxy, mmu_enable, sup_enabled, r_prev_ie, r_ie};
 
 	always @(*)
 	if (rs1 == r_wb_addr && r_wb_addr!=0) begin
@@ -240,8 +239,6 @@ module execute(input clk, input reset,
 	reg [RV-1:0]r_wb, c_wb;
 	reg [3:0]r_wb_addr;
 	reg r_ie;
-	reg r_rom_enable;
-	assign rom_enable = r_rom_enable;
 	reg r_wb_valid;
 	always @(*)
 `ifdef MULT
@@ -450,7 +447,6 @@ module execute(input clk, input reset,
 	always @(posedge clk) begin
 		//r_trap <= !reset && valid && (trap || interrupt&&r_ie);
 		r_ie <= reset ? 0 : valid && (sys_trap || interrupt&&r_ie) ? 0: r_wb_valid && (r_wb_addr == 4) && sup_enabled ? r_wb[0] : valid&&jmp&&rs1==3&&sup_enabled?r_prev_ie : r_ie; 
-		r_rom_enable <= reset ? 1 : r_wb_valid && (r_wb_addr == 4) && sup_enabled ? r_wb[6] : r_rom_enable; 
 		r_pc <= c_pc;
 		r_branch_stall <= !reset&valid&(jmp|br&br_taken);
 	end

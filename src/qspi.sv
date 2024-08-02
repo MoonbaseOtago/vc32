@@ -19,6 +19,7 @@ module qspi(input clk, input reset,
 			input	[3:0]dwrite,
 			output	    rstrobe_d,
 	
+			output	[1:0]rom_mode, 
 			input	[3:0]reg_addr,
 			input   [7:0]reg_data,
 			input	     reg_write);
@@ -30,6 +31,16 @@ module qspi(input clk, input reset,
 	reg [3:0]r_read_delay[0:2];
 	reg      [2:0]r_quad;
 	reg      [2:0]r_mask;
+	//
+	//	rom mode:
+	//
+	//	00 - 8mb CS0 - 8MB CS2
+	//  01 - 8Mb CS0 
+	//  10 - 16Mb CS0 - 8MB ROM CS2
+	//	11 - 8/16Mb CS0 - ROM CS2 overlay 
+	reg	     [1:0]r_rom_mode;
+	assign rom_mode = r_rom_mode;
+	wire force_23_0 = r_rom_mode != 2'b01;
 
 	reg		[2:0]r_cs, c_cs;	
 	reg		[3:0]r_uio_out, c_uio_out;
@@ -48,11 +59,16 @@ module qspi(input clk, input reset,
 			r_read_delay[2] <= 5;	// 6 clocks for RAM 
 			r_mask <= 3'b010;
 			r_quad <= 3'b101;
+			r_rom_mode <= 2'b11;
 		end else
-		if (reg_write && reg_addr[1:0] != 3) begin
-			r_read_delay[reg_addr[1:0]] <= reg_data[3:0];
-			r_mask[reg_addr[1:0]] <= reg_data[7];
-			r_quad[reg_addr[1:0]] <= reg_data[6];
+		if (reg_write) begin
+			if (reg_addr[1:0] == 3) begin
+				r_rom_mode <= reg_data[1:0];
+			end else begin
+				r_read_delay[reg_addr[1:0]] <= reg_data[3:0];
+				r_mask[reg_addr[1:0]] <= reg_data[7];
+				r_quad[reg_addr[1:0]] <= reg_data[6];
+			end
 		end
 
 		reg [4:0]r_state, c_state;
@@ -132,7 +148,7 @@ module qspi(input clk, input reset,
 			9: begin
 					c_state = 10;
 					c_uio_oe = 2'b11;
-					c_uio_out = {{(24-PA){1'b0}}, paddr[PA-1:20]};
+					c_uio_out = {{(24-PA){1'b0}}, paddr[PA-1:20]}&{~force_23_0, 3'b000};
 			   end
 			10:begin
 					c_state = 11;

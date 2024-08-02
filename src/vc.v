@@ -99,7 +99,6 @@ assign uio_oe[7:4]=0;
 	wire[RV-1:0]mmu_reg_data;
 	wire[RV-1:0]mmu_read;
 	wire		supmode;
-	wire		rom_enable;
 	wire		mmu_enable;
 	wire		mmu_i_proxy, mmu_d_proxy;
 	wire		mmu_miss_fault, mmu_prot_fault;
@@ -239,7 +238,6 @@ assign uio_oe[7:4]=0;
 		.mmu_miss_fault(mmu_miss_fault),
 		.mmu_prot_fault(mmu_prot_fault),
 		.mmu_fault(mmu_fault),
-		.rom_enable(rom_enable),
 		.fault(fault),
 		.op(op),
 		.rs1(rs1),
@@ -304,13 +302,15 @@ assign uio_oe[7:4]=0;
 
 	wire uart_intr;
 
+	wire [21:0]rom_mode;
 	reg [1:0]mem;
 	always @(*) begin
-		if (rom_enable && (ifetch || !d_push)) begin
-			mem = 1;
-		end else begin
-			mem = phys_addr[23]? 2:0;
-		end
+		case (rom_mode)
+		2'b00: mem = phys_addr[23]? 2:0;
+		2'b01: mem = 0;
+		2'b10: mem = phys_addr[23]? 1:0;
+		2'b11: mem = (ifetch || !d_push)? 1:0;
+		endcase
 	end
 
 	qspi  #(.RV(RV), .LINE_LENGTH(LINE_LENGTH), .PA(PA))qspi(.clk(clk), .reset(reset),
@@ -329,6 +329,7 @@ assign uio_oe[7:4]=0;
             .dwrite(dwrite),
             .rstrobe_d(d_rstrobe_d),
 
+			.rom_mode(rom_mode),
             .reg_addr(addr[4:1]),
             .reg_data(wdata[7:0]),
             .reg_write(|wmask&&io_access&&!fault&&(addr[7:5]==0)));
