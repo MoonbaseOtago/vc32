@@ -82,7 +82,7 @@ module decode(input clk, input reset,
 		c_op = 4'bx;
 		c_rs1 = 4'bx;
 		c_rs2 = 4'bx;
-		c_rd = 4'bx;
+		c_rd = 4'h0;
 		c_imm = {RV{1'bx}};
 		c_jmp = 0;
 		c_br = 0;
@@ -346,6 +346,7 @@ module decode(input clk, input reset,
 									c_swapsp = 1;
 								 end
 						11'b010??:begin				// flush all
+									c_rd = 0;
 									c_flush_all = 1;
 									c_imm = {{(RV-2){1'bx}}, ins[3:2]};
 									c_trap = !supmode;

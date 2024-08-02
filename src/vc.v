@@ -302,7 +302,7 @@ assign uio_oe[7:4]=0;
 
 	wire uart_intr;
 
-	wire [21:0]rom_mode;
+	wire [1:0]rom_mode;
 	reg [1:0]mem;
 	always @(*) begin
 		case (rom_mode)

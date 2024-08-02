@@ -56,10 +56,11 @@ fl:		flush	(a1)	// flush dcache data
 		add	a0, -1
 		bnez	a0, fl	
 	flush	dcache	// flush dcache tags
-	mv	a0, csr
-	li	a1, ~(1<<6)
-	and	a0, a1
-	mv	csr, a0	// turn off rom
+
+	li	a0, 0
+	li	a1, 0x00 // spi base
+	stio	a0, 6(a1) // turn off rom
+
 	flush  icache	// flush icache tags
 
 //switch to ram
