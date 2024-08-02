@@ -62,7 +62,7 @@ module mmu(input clk,  input reset, input is_pc, input is_write, input mmu_enabl
 
 	reg [4*NMMU-1:0]r_valid;
 	reg [2*NMMU-1:0]r_writeable;
-	wire [$clog2(NMMU)+1:0]sel = {is_pc|(supmode&mmu_i_proxy), supmode&~mmu_d_proxy, taddr[VA-1:UNTOUCHED]};
+	wire [$clog2(NMMU)+1:0]sel = {is_pc, supmode&~mmu_d_proxy&~is_pc, taddr[VA-1:UNTOUCHED]};
 
 	assign mmu_miss_fault = mmu_enable && !r_valid[sel];
 	assign mmu_prot_fault = mmu_enable && is_write && !r_writeable[sel[VA-UNTOUCHED:0]];
@@ -85,8 +85,8 @@ wire [PA-1:UNTOUCHED]vtop_3_00 = r_vtop['h30];
 		r_fault_address <= taddr[VA-1:UNTOUCHED];
 		r_fault_valid <= !mmu_miss_fault;
 		r_fault_write <= is_write;
-		r_fault_ins <= is_pc|(supmode&mmu_i_proxy);
-		r_fault_sup <= supmode&~mmu_d_proxy;
+		r_fault_ins <= is_pc;
+		r_fault_sup <= supmode&~mmu_d_proxy%~is_pc;
 	end else
 	if (reg_write) begin
 		if (reg_data[0]) begin
