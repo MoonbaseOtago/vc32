@@ -25,7 +25,7 @@ module mmu(input clk,  input reset, input is_pc, input is_write, input is_read, 
 	reg				     r_fault_type;
 	reg				     r_fault_ins;
 	reg				     r_fault_sup;
-	assign reg_read =  {r_fault_address, {(RV-(VA-UNTOUCHED)-5){1'b0}}, r_fault_ins, r_fault_sup, r_fault_type, 1'b0};
+	assign reg_read =  {r_fault_address, {(RV-(VA-UNTOUCHED)-4){1'b0}}, r_fault_ins, r_fault_sup, r_fault_type, 1'b0};
 
 	wire  [VA-1:RV/16]taddr = (!is_write&&is_pc? pcv: addrv);
 
