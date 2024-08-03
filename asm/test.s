@@ -15,10 +15,10 @@ mmu_trap:
 	la	a2, mmu_vector
 	lw	a2, (a2)
 	jr	a2
-intr:	j	intr
-trap:	j	trap
+intr:	j	fail
+trap:	j	fail
 syscall_vector:
-	.word	0
+	.word	fail
 sys_trap:
 	la	a2, syscall_vector
 	lw	a2, (a2)
@@ -346,7 +346,7 @@ lp1:
 			mv	mmu, a2
 			add	a1, a3
 			bnez	a0, lp1
-		add	a1, 1<<3
+		add	a1, 1<<2
 		bnez    a4, lp2
 //
 
@@ -427,13 +427,13 @@ syscall2:
 //	map I/D sup pages 1:1
 //
 //
-	li	a0, 0x18	// S I #0
+	li	a0, 0x0c	// S I #0
 	mv	mmu, a0
 	li	a0, 0x3		// V ->1 
 	mv	mmu, a0
 	jal	send		//0x3 #0
 
-	li	a0, 0x08	// S D #0
+	li	a0, 0x04	// S D #0
 	mv	mmu, a0
 	li	a0, 0x07	// V W ->1 
 	mv	mmu, a0
@@ -494,28 +494,110 @@ xx:
 	lb	a0, (a2)	// ck that load/store work thru mmu
 	jal	send		// 0x65
 
-	li	a0, 0x08	// S D #0
+	la	a1, mmu_vector
+	la	a0, wrt1
+	sw	a0, (a1)
+
+	li	a0, 0x04	// S D #0
 	mv	mmu, a0
-	li	a0, 0x03	// V W ->1 
+	li	a0, 0x03	// V  ->1 
 	mv	mmu, a0
 	jal	send		// 0x3
 
 	lb	a0, (a2)	// ck that load works thru mmu read only
 	jal	send		// 0x65
 
-	jal fail
+	li	a0, 0x55
+uu1:	sb	a0, (a2)
+	jal	send		// force fail
+
+wrt1:
+	mv	a2, mmu
+	li	a0, 0xffaa	// did we take a write trap?
+	jal	send		// 0xaa
+	mv 	a0, a2
+	jal	send		// 0x04
+
+	li	a0, 0x04	// S D #0	// turn write back on
+	mv	mmu, a0
+	li	a0, 0x07	// VW  ->1 
+	mv	mmu, a0
 
 	la	a1, mmu_vector
-	la	a2, wrt
-	sw	a2, (a1)
-	li	a1, 0x55
-uu1:	sb	a1, (a0)
-uuu:	sw	a1, (a5)        // this is to force a fail
+	la	a0, wrt2
+	sw	a0, (a1)
 
-wrt:
-	li	a1, 0xffaa	// did we take a write trap?
-	sw	a1, (a5)        // 0xffaa
+	li	a0, 0x1000
+	sw	a0, (a0)
+	j	fail
+
+wrt2:	mv 	a0, mmu
+	jal	send		// 0x1
+
+	la	a1, mmu_vector
+	la	a0, wrt3
+	sw	a0, (a1)
+
+	li	a0, 0x66
+	jal     send            // 0x66
+
+	li	a0, 0x1004	// S D #4000
+	mv	mmu, a0
+	li	a0, 0x0017	// V W -> 1000 
+	mv	mmu, a0
+	li	a0, 0x55
+	jal	send		// 0x55
+
+
+	li	a0, 0xffc4
+	li	a1, 0x1000
+	sw	a0, (a1)
+	jal	send		// 0xc4
+
+	li	a0, 0x0000	// S D #0
+	mv	mmu, a0
+	li	a0, 0x0017	// V W -> 1000 
+	mv	mmu, a0
+	li	a0, 0x33
+	jal	send		// 0x33
+
+	li	a4, 0x0
+	mv	a2, csr
+	li	a3, 0x10
+	or	a3, a2
+	mv	csr, a3
+	lw	a1, (a4)
+	mv	csr, a2
+	mv	a0, a1
+	jal	send		// 0xc4
+	swap	a0, a1
+	jal	send		// 0xff
+
+	li	a0, 0x77
+	mv	csr, a3
+	sw	a0, (a4)
+	mv	csr, a2
+	jal	send		// 0x77
+
+	li	a0, 0x1000
+	lw 	a0, (a0)
+	jal	send		// 0x77
+
+	li	a0, 0x0000	// S D #0
+	mv	mmu, a0
+	li	a0, 0x0013	// V -> 1000 // turn off u mode write
+	mv	mmu, a0
+	li	a0, 0x33
+	jal	send		// 0x33
+
+wrt3:	mv	a0, mmu
+	jal	send		// 0x01
+	li	a0, 0x44
+	jal	send		// 0x44
+
 	
+	jal fail
+
 
 // something to test addpc
 	ebreak

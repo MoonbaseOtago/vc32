@@ -100,7 +100,7 @@ assign uio_oe[7:4]=0;
 	wire[RV-1:0]mmu_read;
 	wire		supmode;
 	wire		mmu_enable;
-	wire		mmu_i_proxy, mmu_d_proxy;
+	wire		mmu_d_proxy;
 	wire		mmu_miss_fault, mmu_prot_fault;
 	wire		mmu_fault;
 	wire		ifetch;
@@ -113,7 +113,6 @@ assign uio_oe[7:4]=0;
 		end else begin
 			mmu   #(.VA(VA), .PA(PA), .RV(RV), .NMMU(NMMU))mmu(.clk(clk), .reset(reset), .supmode(supmode),
 						.mmu_enable(mmu_enable),
-						.mmu_i_proxy(mmu_i_proxy),
 						.mmu_d_proxy(mmu_d_proxy),
 						.is_pc(ifetch),
 						.is_read(is_read),
@@ -236,7 +235,6 @@ assign uio_oe[7:4]=0;
 		.supmode(supmode),
 		.user_io(user_io),
 		.mmu_enable(mmu_enable),
-		.mmu_i_proxy(mmu_i_proxy),
 		.mmu_d_proxy(mmu_d_proxy),
 		.mmu_miss_fault(mmu_miss_fault),
 		.mmu_prot_fault(mmu_prot_fault),
@@ -262,8 +260,8 @@ assign uio_oe[7:4]=0;
 	wire [3:0]dwrite;
 	wire [PA-1:1]phys_addr = addrp; // {addrp, |wmask|| |rstrobe? addr[$clog2(LINE_LENGTH)-1:RV/16]: pc[$clog2(LINE_LENGTH)-1:RV/16]};
 
-	assign rdone =  |rstrobe && (io_access ? io_rdone : d_hit && !(d_pull|d_push)) && !fault;
-	assign wdone =  |wmask &&   (io_access ? io_wdone : ((d_hit && (!(d_pull|d_push)))|d_wdone) || (!d_push&&flush_write)) && !fault;
+	assign rdone =  |rstrobe && ((io_access ? io_rdone : d_hit && !(d_pull|d_push)) || fault);
+	assign wdone =  |wmask &&   ((io_access ? io_wdone : ((d_hit && (!(d_pull|d_push)))|d_wdone) || (!d_push&&flush_write)) || fault);
 
 
 	icache #(.PA(PA), .LINE_LENGTH(LINE_LENGTH), .RV(RV), .NLINES(I_NLINES))icache(.clk(clk), .reset(reset),

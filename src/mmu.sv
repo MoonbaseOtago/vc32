@@ -4,7 +4,7 @@
 //	All Rights Reserved
 //
 
-module mmu(input clk,  input reset, input is_pc, input is_write, input is_read, input mmu_enable, input mmu_i_proxy, input mmu_d_proxy, input supmode,
+module mmu(input clk,  input reset, input is_pc, input is_write, input is_read, input mmu_enable, input mmu_d_proxy, input supmode,
 			input [VA-1:RV/16]pcv,
 			input [VA-1:RV/16]addrv, 
 			output [PA-1:RV/16]addrp,
@@ -22,11 +22,10 @@ module mmu(input clk,  input reset, input is_pc, input is_write, input is_read, 
 
 	parameter UNTOUCHED = VA-$clog2(NMMU);
 	reg [VA-1: UNTOUCHED]r_fault_address;
-	reg				     r_fault_valid;
-	reg				     r_fault_write;
+	reg				     r_fault_type;
 	reg				     r_fault_ins;
 	reg				     r_fault_sup;
-	assign reg_read =  {r_fault_address, {(RV-(VA-UNTOUCHED)-5){1'b0}}, r_fault_ins, r_fault_sup, r_fault_write, r_fault_valid, 1'b0};
+	assign reg_read =  {r_fault_address, {(RV-(VA-UNTOUCHED)-5){1'b0}}, r_fault_ins, r_fault_sup, r_fault_type, 1'b0};
 
 	wire  [VA-1:RV/16]taddr = (!is_write&&is_pc? pcv: addrv);
 
@@ -43,19 +42,17 @@ module mmu(input clk,  input reset, input is_pc, input is_write, input is_read, 
 //	write phys:
 
 //	15-X upper bits virtual fault address
-//	4	fault_ins
-//	3	fault_sup
-//	2	fault_write
-//	1	fault_valid
+//	3	fault_ins
+//	2	fault_sup
+//	1	fault_type	1 valid fault 0 write fault
 //	0 - 0
 //
 //	read:
 //
 //	15-X upper bits virtual fault address
-//	4	fault_ins
-//	3	fault_sup
-//	2	fault_write
-//	1	fault_valid
+//	3	fault_ins
+//	2	fault_sup
+//	1	fault_type	1 valid fault 0 write fault
 //	0   0
 //
 //	
@@ -76,15 +73,13 @@ wire [PA-1:UNTOUCHED]vtop_3_00 = r_vtop['h30];
 	always @(posedge clk)
 	if (reset) begin
 		r_valid <= 0;
-		r_fault_valid <= 0;
-		r_fault_write <= 0;
+		r_fault_type <= 0;
 		r_fault_ins <= 0;
 		r_fault_sup <= 0;
 	end else
 	if (mmu_fault) begin
 		r_fault_address <= taddr[VA-1:UNTOUCHED];
-		r_fault_valid <= !mmu_miss_fault;
-		r_fault_write <= is_write;
+		r_fault_type <= mmu_miss_fault;
 		r_fault_ins <= is_pc;
 		r_fault_sup <= supmode&~(mmu_d_proxy&~is_pc);
 	end else
@@ -96,10 +91,9 @@ wire [PA-1:UNTOUCHED]vtop_3_00 = r_vtop['h30];
 				r_writeable[reg_addr[$clog2(NMMU):0]] <= reg_data[2];
 		end else begin
 			r_fault_address <= reg_data[VA-1:UNTOUCHED];
-			r_fault_valid <= reg_data[1];
-			r_fault_write <= reg_data[2];
-			r_fault_sup <= reg_data[3];
-			r_fault_ins <= reg_data[4];
+			r_fault_type <= reg_data[1];
+			r_fault_sup <= reg_data[2];
+			r_fault_ins <= reg_data[3];
 		end
 	end 
 endmodule

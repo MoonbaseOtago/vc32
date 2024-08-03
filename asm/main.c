@@ -17,7 +17,7 @@ int bit32=0;
 
 void declare_label(int ind);
 void process_op(int ins);
-int ref_label(int ind, int type);
+int ref_label(int ind, int type, int offset);
 
 void
 chkr(int r) {
@@ -205,6 +205,15 @@ int luioff(int v, int l)
 	return (((v&0x1f)<<2)| (((v>>5)&1)<<12) | (((v>>6)&1)<<11));
 }
 
+int simple_li(int v)
+{
+	if (!bit32 && v&0x8000)
+		v |= 0xffff0000;
+	if (v < -(1<<7) || v >= (1<<7) ) 
+		return 0;
+	return 1;
+}
+
 int lioff(int v)
 {
 	if (!bit32 && v&0x8000)
@@ -256,6 +265,7 @@ struct tab reserved[] = {
 	"sub", t_sub,
 	"add", t_add,
 	"mv", t_mv,
+	"mov", t_mv,
 	"nop", t_nop,
 	"inv", t_inv,
 	"ebreak", t_ebreak,
@@ -300,6 +310,7 @@ struct symbol *list=0;
 
 struct reloc {
 	int offset;
+	int extra;
 	int index;
 	int line;
 	int type;
@@ -327,11 +338,12 @@ declare_label(int ind)
 	assert(1);
 }
 int
-ref_label(int ind, int type)
+ref_label(int ind, int type, int offset)
 {
 	struct reloc *rp;
 	rp = malloc(sizeof(*rp));
 	rp->offset = pc;
+	rp->extra = offset;
 	rp->index = ind;
 	rp->line = line-1;
 	rp->type = type;
@@ -622,7 +634,7 @@ main(int argc, char **argv)
 				}
 				break;
 			case 4:	// la lui part
-				delta = sp->offset;
+				delta = sp->offset+rp->extra;
 				if (delta >= (1<<15)) {
 					errs++;
 					fprintf(stderr, "%d: '%s' la too far\n", rp->line, sp->name);
@@ -636,7 +648,7 @@ main(int argc, char **argv)
 				}
 				break;
 			case 5:	// la add part
-				delta = sp->offset&0xff;
+				delta = (sp->offset+rp->extra)&0xff;
 				if (delta&0x80) 
 					delta = -(0x100-delta);
 				code[rp->offset] |= imm8(delta, rp->line);

@@ -63,7 +63,6 @@ module execute(input clk, input reset,
 		output		mmu_enable,
 		output		user_io,
 		output		mmu_fault,
-		output		mmu_i_proxy,
 		output		mmu_d_proxy,
 		input		mmu_miss_fault, mmu_prot_fault
 	);
@@ -132,7 +131,7 @@ module execute(input clk, input reset,
 
 	wire sup_enabled;
 
-	wire [RV-1:0]csr = {{(RV-8){1'b0}}, user_io, 1'b0, mmu_i_proxy, mmu_d_proxy, mmu_enable, sup_enabled, r_prev_ie, r_ie};
+	wire [RV-1:0]csr = {{(RV-8){1'b0}}, user_io, 2'b00, mmu_d_proxy, mmu_enable, sup_enabled, r_prev_ie, r_ie};
 
 	always @(*)
 	if (rs1 == r_wb_addr && r_wb_addr!=0) begin
@@ -332,8 +331,6 @@ module execute(input clk, input reset,
 			assign user_io = r_user_io;
 			reg r_mmu_enable;
 			assign mmu_enable = r_mmu_enable;
-			reg r_mmu_i_proxy;
-			assign mmu_i_proxy = r_mmu_i_proxy;
 			reg r_mmu_d_proxy;
 			assign mmu_d_proxy = r_mmu_d_proxy;
 			
@@ -388,14 +385,7 @@ module execute(input clk, input reset,
 				r_mmu_d_proxy <= 0;
 			end else 
 			if (r_wb_valid && r_wb_addr == 4'b0100 && sup_enabled)
-				r_mmu_d_proxy <= r_wb[5];
-
-			always @(posedge clk) 
-			if (reset) begin
-				r_mmu_i_proxy <= 0;
-			end else 
-			if (r_wb_valid && r_wb_addr == 4'b0100 && sup_enabled)
-				r_mmu_i_proxy <= r_wb[4];
+				r_mmu_d_proxy <= r_wb[4];
 
 			assign mmu_trap = ((mmu_miss_fault)&r_read_stall) | ((mmu_miss_fault|mmu_prot_fault)&(|wmask));
 			assign mmu_fault = mmu_trap;
@@ -432,15 +422,15 @@ module execute(input clk, input reset,
 	always @(*)
 	casez ({reset, r_read_stall, valid, sys_trap, sys_call, mmu_trap, interrupt&r_ie, jmp, br&br_taken})  // synthesis full_case parallel_case
 	9'b1????????:	c_pc = 0;	// 0	reset
+	9'b01???????:	c_pc = r_pc;
 	9'b001100???:	c_pc = 2;	// 4	trap
 	9'b0010??1??:	c_pc = 4;	// 8	interruopt
 	9'b001110???:	c_pc = 6;	// 12	syscall
-	9'b0011?1???:	c_pc = 8;	// 16	mmu
+	9'b0001?1???:	c_pc = 8;	// 16	mmu
 	9'b0010??010:	c_pc = c_wb[VA-1:1];
 	9'b0010??0?1:	c_pc = c_wb[VA-1:1];
 	9'b0010??000:	c_pc = pc_plus_1;
-	9'b01???????:	c_pc = r_pc;
-	9'b000??????:	c_pc = r_pc;
+	//9'b000??????:	c_pc = r_pc;
 	default:		c_pc = r_pc;
 	endcase
 
