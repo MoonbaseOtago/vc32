@@ -531,8 +531,11 @@ wrt1:
 	sw	a0, (a0)
 	j	fail
 
-wrt2:	mv 	a0, mmu
-	jal	send		// 0x1
+wrt2:	mv 	a1, mmu
+	mv 	a0, a1
+	jal	send		// 0x6
+	swap 	a0, a1
+	jal	send		// 0x10
 
 	la	a1, mmu_vector
 	la	a0, wrt3
@@ -590,10 +593,28 @@ wrt2:	mv 	a0, mmu
 	li	a0, 0x33
 	jal	send		// 0x33
 
-wrt3:	mv	a0, mmu
-	jal	send		// 0x01
-	li	a0, 0x44
-	jal	send		// 0x44
+	mv	csr, a3
+	lw	a0, (a4)	// can still read
+	mv	csr, a2
+	jal     send            // 0x77
+
+
+	li	a0, 0x11
+	mv	csr, a3
+	sw	a0, (a4)	// should fail
+	mv	csr, a2
+	j	fail
+
+wrt3:	mv	a1, mmu
+	mv	csr, a2
+	mov	a0, a1
+	jal	send		// 0x04
+	swap	a0, a1
+	jal	send		// 0x00
+
+	li	a0, 0x1000
+	lw	a0, (a0)
+	jal	send		// 0x11
 
 	
 	jal fail

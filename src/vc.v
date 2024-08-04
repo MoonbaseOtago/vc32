@@ -319,7 +319,7 @@ assign uio_oe[7:4]=0;
             .uio_out(uio_out[3:0]),
             .cs({uo_out[7], uo_out[1:0]}),
 
-            .req((ifetch&i_pull)|(((|rstrobe || |wmask)&(d_pull|d_push))&!io_access)),
+            .req((ifetch&i_pull)|(((|rstrobe || |wmask)&(d_pull|d_push))&!io_access&!fault)),
             .i_d(ifetch),
             .mem(mem),  
             .write(!ifetch && d_push),
