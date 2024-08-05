@@ -171,14 +171,11 @@ module execute(input clk, input reset,
 	end
 
 	always @(*) 
-	if (rs2_pc) begin
-		r2 = {r_pc, 1'b0};
-	end else
-	if (!needs_rs2) begin
-		r2 = imm;
-	end else begin
-		r2 = r2reg;
-	end
+	casex ({rs2_pc, needs_rs2})
+	2'b1?: r2 = {r_pc, 1'b0};
+	2'b00: r2 = imm;
+	2'b01: r2 = r2reg;
+	endcase
 	
 	always @(*) 
 	if (rs2 == r_wb_addr && r_wb_addr !=0) begin
@@ -384,6 +381,9 @@ module execute(input clk, input reset,
 			if (reset) begin
 				r_mmu_d_proxy <= 0;
 			end else 
+			if (mmu_trap) begin
+				r_mmu_d_proxy <= 0;
+			end else
 			if (r_wb_valid && r_wb_addr == 4'b0100 && sup_enabled)
 				r_mmu_d_proxy <= r_wb[4];
 

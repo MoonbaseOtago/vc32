@@ -400,7 +400,7 @@ module decode(input clk, input reset,
 								3'b0_10:	c_op = `OP_ADDB;
 								3'b0_11:	c_op = `OP_ADDBU;
 								3'b1_00:	c_op = `OP_SWAP; // swap 
-								3'b1_01:	begin c_op = `OP_ADDB; c_rs2_pc = 1; c_rs2 = 0; end	// sext
+								3'b1_01:	begin c_op = `OP_ADD; c_rs2_pc = 1; c_rs2 = 'bx; end	// addpc
 								3'b1_10:	begin c_op = `OP_ADDB; c_rs2 = 0; end	// sext
 								3'b1_11:	begin c_op = `OP_ADDBU; c_rs2 = 0; end	// zext
 								default:	c_trap = 1;

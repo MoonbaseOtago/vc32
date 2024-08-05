@@ -11,12 +11,20 @@ begin:
 	j	mmu_trap
 mmu_vector:
 	.word	fail
+int_vector:
+	.word	fail
+trap_vector:
+	.word	fail
 mmu_trap:
-	la	a2, mmu_vector
-	lw	a2, (a2)
-	jr	a2
-intr:	j	fail
-trap:	j	fail
+	la	s1, mmu_vector
+	lw	s1, (s1)
+	jr	s1
+intr:	la      s1, int_vector
+	lw      s1, (s1)
+	jr      s1
+trap:	la      s1, trap_vector
+	lw      s1, (s1)
+	jr      s1
 syscall_vector:
 	.word	fail
 sys_trap:
@@ -601,20 +609,40 @@ wrt2:	mv 	a1, mmu
 
 	li	a0, 0x11
 	mv	csr, a3
-	sw	a0, (a4)	// should fail
+ff1:	sw	a0, (a4)	// should fail
 	mv	csr, a2
 	j	fail
 
 wrt3:	mv	a1, mmu
 	mv	csr, a2
 	mov	a0, a1
-	jal	send		// 0x04
+	jal	send		// 0x00
 	swap	a0, a1
 	jal	send		// 0x00
 
 	li	a0, 0x1000
 	lw	a0, (a0)
-	jal	send		// 0x11
+	jal	send		// 0x77
+
+// add later - run some mapped code in user mode
+
+	la	a0, trap_vector
+	la	a1, trapx
+	sw	a1, (a0)
+	ebreak
+trapx:	li	a0, 0x67
+	jal	send		// 0x67
+
+	la	a1, faddr	// test addpc
+	li	a0, 9
+faddr:	addpc	a0
+	add	a0, -9
+	sub	a1, a0
+	mv	a0, a1
+	jal	send	// 0
+	swap	a0, a1
+	jal	send	// 0
+	
 
 	
 	jal fail
