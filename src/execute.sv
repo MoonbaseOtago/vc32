@@ -235,7 +235,7 @@ module execute(input clk, input reset,
 	reg [RV-1:0]sll_v, sra_v, srl_v;
 	generate
 		if (RV == 16) begin
-			always @(r2)
+			always @(*)
 			case (r2[3:0])
 			1: sll_v = {r1[14:0], 1'b0};
 			2: sll_v = {r1[13:0], 2'b0};
@@ -255,7 +255,7 @@ module execute(input clk, input reset,
 			0: sll_v = 16'b0;
 			endcase
 
-			always @(r2)
+			always @(*)
 			case (r2[3:0])
 			1: srl_v = {1'b0, r1[15:1]};
 			2: srl_v = {2'b0, r1[15:2]};
@@ -275,7 +275,7 @@ module execute(input clk, input reset,
 			0: srl_v =  16'b0;
 			endcase
 
-			always @(r2)
+			always @(*)
 			case (r2[3:0])
 			1: sra_v = {{1{r1[15]}}, r1[15:1]};
 			2: sra_v = {{2{r1[15]}}, r1[15:2]};

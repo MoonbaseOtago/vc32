@@ -15,6 +15,8 @@ int_vector:
 	.word	fail
 trap_vector:
 	.word	fail
+subr:	add	a0, 2
+	jr	lr
 mmu_trap:
 	la	s1, mmu_vector
 	lw	s1, (s1)
@@ -702,7 +704,83 @@ ffff:
 	swap	a0, a1
 	jal	sendx 	// 55
 
+// some more shift testing
 
+	li	a1, 0x1234
+	li	a0, 0x8
+	sll	a1, a0
+	mv	a0, a1
+	jal     sendx   // 00
+	swap	a0, a1
+	jal     sendx   // 34
+
+	li	a1, 0x1234
+	sll	a1, 12
+	mv	a0, a1
+	jal     sendx   // 00
+	swap	a0, a1
+	jal     sendx   // 40
+
+	li	a1, 0x1234
+	li	a0, 8
+	srl	a1, a0
+	mv	a0, a1
+	jal     sendx   // 12
+	swap	a0, a1
+	jal     sendx   // 00
+
+	li	a1, 0x1234
+	srl	a1, 12
+	mv	a0, a1
+	jal     sendx   // 01
+	swap	a0, a1
+	jal     sendx   // 00
+
+	li	a1, 0x1234
+	li	a0, 8
+	sra	a1, a0
+	mv	a0, a1
+	jal     sendx   // 12
+	swap	a0, a1
+	jal     sendx   // 00
+
+	li	a1, 0x1234
+	sra	a1, 12
+	mv	a0, a1
+	jal     sendx   // 01
+	swap	a0, a1
+	jal     sendx   // 00
+
+	li	a1, 0x9234
+	li	a0, 8
+	sra	a1, a0
+	mv	a0, a1
+	jal     sendx   // 92
+	swap	a0, a1
+	jal     sendx   // ff
+
+	li	a1, 0x9234
+	sra	a1, 12
+	mv	a0, a1
+	jal     sendx   // f9
+	swap	a0, a1
+	jal     sendx   // ff
+
+	li	a1, 0x1234
+	li	a0, 16
+	sra	a1, a0
+	mv	a0, a1
+	jal     sendx   // 00
+	swap	a0, a1
+	jal     sendx   // 00
+	
+	li	a1, 0x9234
+	li	a0, 16
+	sra	a1, a0
+	mv	a0, a1
+	jal     sendx   // ff
+	swap	a0, a1
+	jal     sendx   // ff
 	
 	jal fail
 
@@ -722,8 +800,6 @@ loc:	.word	0x99
 	.word	0x0
 	.word	0x0
 
-subr:	add	a0, 2
-	jr	lr
 
 
 end:
