@@ -245,7 +245,7 @@ module execute(input clk, input reset,
 			6: sll_v = {r1[9:0], 6'b0};
 			7: sll_v = {r1[8:0], 7'b0};
 			8: sll_v = {r1[7:0], 8'b0};
-			9: sll_v = {r1[5:0], 9'b0};
+			9: sll_v = {r1[6:0], 9'b0};
 			10:sll_v = {r1[5:0], 10'b0};
 			11:sll_v = {r1[4:0], 11'b0};
 			12:sll_v = {r1[3:0], 12'b0};
