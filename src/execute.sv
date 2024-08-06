@@ -172,7 +172,7 @@ module execute(input clk, input reset,
 	end
 
 	always @(*) 
-	casex ({rs2_pc, needs_rs2})
+	casez ({rs2_pc, needs_rs2})
 	2'b1?: r2 = {r_pc, 1'b0};
 	2'b00: r2 = imm;
 	2'b01: r2 = r2reg;
@@ -267,39 +267,38 @@ module execute(input clk, input reset,
 	reg	[$clog2(RV)-1:0]r_mult_off, c_mult_off;
 
 	wire div0 = r2==0;
+	reg [RV-1:0]t1;
+	reg [RV:0]t2;
 
 	always @(*) begin
+		t1 = 'bx;
+		t2 = 'bx;
 		c_mult_off = (start_mult||start_div)?~0:r_mult_off-1;
 		if (r_wb_valid && r_wb_addr == 4'b0111) begin
 			c_mult = {r_wb, r_mult[RV-1:0]};
 		end else
-	    if (r_mult_running || start_mult) begin
-			c_mult = ((start_mult ? {2*RV{1'b0}} : {r_mult[2*RV-2:0], 1'b0}) + (r1[c_mult_off]?{{RV{1'b0}},r2}:{2*RV{1'b0}}));
-		end else
-		
-	    if (r_div_running || start_div) begin
-			if (div0) begin
-				c_mult = {2*RV{1'b0}};
-			end else begin :div1
-				reg [RV-1:0]t1;
-				reg [RV:0]t2;
-
-				c_mult = r_mult;
-				if (start_div) begin
-					t1 = {{RV-1{1'b0}}, r1[RV-1]};
+		case ({r_mult_running|start_mult, r_div_running|start_div})
+		2'b10: c_mult = ((start_mult ? {2*RV{1'b0}} : {r_mult[2*RV-2:0], 1'b0}) + (r1[c_mult_off]?{{RV{1'b0}},r2}:{2*RV{1'b0}}));
+		2'b01: begin
+				if (div0) begin
+					c_mult = {2*RV{1'b0}};
 				end else begin
-					t1 = {r_mult[RV*2-2:RV], r1[c_mult_off]};
+					if (start_div) begin
+						t1 = {{RV-1{1'b0}}, r1[RV-1]};
+					end else begin
+						t1 = {r_mult[RV*2-2:RV], r1[c_mult_off]};
+					end
+					t2 = {1'b0, t1} - {1'b0, r2};
+					if (!t2[RV]) begin
+						c_mult = {t2[RV-1:0], r_mult[RV-2:0], 1'b1};
+					end else begin
+						c_mult = {t1, r_mult[RV-2:0], 1'b0};
+					end
 				end
-				t2 = {1'b0, t1} - {1'b0, r2};
-				if (!t2[RV]) begin
-					c_mult = {t2[RV-1:0], r_mult[RV-2:0], 1'b1};
-				end else begin
-					c_mult = {t1, r_mult[RV-2:0], 1'b0};
-				end
-			end
-		end else begin
-			c_mult = r_mult;
-		end
+			   end
+		2'b00: c_mult = r_mult;
+		2'b11: c_mult = 'bx;
+		endcase
 		c_mult_running = (reset|| r_mult_running&&c_mult_off==0 ? 0 : start_mult ? 1 : r_mult_running);
 		c_div_running = (reset|| r_div_running&&c_mult_off==0 ? 0 : start_div ? 1 : r_div_running);
 	end
