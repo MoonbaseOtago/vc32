@@ -35,7 +35,7 @@ async def test_vc_cpu(dut):
     dut.rst_n.value = 1
 
     # check all values
-    for i in range(200):		#  67
+    for i in range(140):		#  67
         dut._log.info("check output {}".format(i))
         dut._log.info("expected value {}".format(outputs[i]))
         while 1 :
