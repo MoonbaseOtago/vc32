@@ -32,6 +32,7 @@ module execute(input clk, input reset,
 		input	swapsp,
 `ifdef MULT
 		input	mult,
+		input	div,
 `endif
 		input	[3:0]op,
 		input   jmp, 
@@ -223,7 +224,7 @@ module execute(input clk, input reset,
 					r_fetch ? !idone :
 				    r_read_stall ? rdone :
 `ifdef MULT
-				mult_stall|r_mult_running ? mdone :
+				mult_stall|r_mult_running|r_div_running ? mdone :
 `endif
 				|r_wmask ? wdone : (valid && !load && !r_branch_stall && !store
 `ifdef MULT
@@ -258,23 +259,55 @@ module execute(input clk, input reset,
 
 `ifdef MULT
 	wire start_mult = valid&mult;
+	wire start_div = valid&div;
 	reg r_mult_running, c_mult_running;
-	assign mult_stall = c_mult_running;
-	assign mdone = ~c_mult_running&r_mult_running;
+	reg r_div_running, c_div_running;
+	assign mult_stall = c_mult_running|c_div_running;
+	assign mdone = ~c_mult_running&r_mult_running || ~c_div_running&r_div_running;
 	reg	[$clog2(RV)-1:0]r_mult_off, c_mult_off;
+
+	wire div0 = r2==0;
+
 	always @(*) begin
-		c_mult_off = start_mult?~0:r_mult_off-1;
+		c_mult_off = (start_mult||start_div)?~0:r_mult_off-1;
 		if (r_wb_valid && r_wb_addr == 4'b0111) begin
 			c_mult = {r_wb, r_mult[RV-1:0]};
+		end else
+	    if (r_mult_running || start_mult) begin
+			c_mult = ((start_mult ? {2*RV{1'b0}} : {r_mult[2*RV-2:0], 1'b0}) + (r1[c_mult_off]?{{RV{1'b0}},r2}:{2*RV{1'b0}}));
+		end else
+		
+	    if (r_div_running || start_div) begin
+			if (div0) begin
+				c_mult = {2*RV{1'b0}};
+			end else begin :div1
+				reg [RV-1:0]t1;
+				reg [RV:0]t2;
+
+				c_mult = r_mult;
+				if (start_div) begin
+					t1 = {{RV-1{1'b0}}, r1[RV-1]};
+				end else begin
+					t1 = {r_mult[RV*2-2:RV], r1[c_mult_off]};
+				end
+				t2 = {1'b0, t1} - {1'b0, r2};
+				if (!t2[RV]) begin
+					c_mult = {t2[RV-1:0], r_mult[RV-2:0], 1'b1};
+				end else begin
+					c_mult = {t1, r_mult[RV-2:0], 1'b0};
+				end
+			end
 		end else begin
-			c_mult = start_mult||r_mult_running ? ((start_mult ? {2*RV{1'b0}} : {r_mult[2*RV-2:0], 1'b0}) + (r1[c_mult_off]?{{RV{1'b0}},r2}:{2*RV{1'b0}})):r_mult;
+			c_mult = r_mult;
 		end
 		c_mult_running = (reset|| r_mult_running&&c_mult_off==0 ? 0 : start_mult ? 1 : r_mult_running);
+		c_div_running = (reset|| r_div_running&&c_mult_off==0 ? 0 : start_div ? 1 : r_div_running);
 	end
 
 	always @(posedge clk) begin
 		r_mult_off <= c_mult_off;
 		r_mult_running <= c_mult_running;
+		r_div_running <= c_div_running;
 		r_mult <= c_mult;
 	end
 `endif

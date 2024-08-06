@@ -151,6 +151,7 @@ assign uio_oe[7:4]=0;
 	wire		 iready;
 `ifdef MULT
 	wire		 mult;
+	wire		 div;
 `endif
 	wire interrupt;
 	
@@ -189,6 +190,7 @@ assign uio_oe[7:4]=0;
 		.do_flush_write(do_flush_write),
 `ifdef MULT
 		.mult(mult),
+		.div(div),
 `endif
 		.op(op),
 		.rs1(rs1),
@@ -228,6 +230,7 @@ assign uio_oe[7:4]=0;
 		.i_flush_all(i_flush_all),
 `ifdef MULT
 		.mult(mult),
+		.div(div),
 `endif
 		.mmu_reg_write(mmu_reg_write),
 		.mmu_reg_data(mmu_reg_data),

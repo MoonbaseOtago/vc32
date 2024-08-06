@@ -36,6 +36,7 @@ module decode(input clk, input reset,
 		output do_flush_write, 
 `ifdef MULT
 		output mult,
+		output div,
 `endif
 		output [3:0]op,
 		output [3:0]rs1, output[3:0]rs2, output [3:0]rd,
@@ -66,6 +67,7 @@ module decode(input clk, input reset,
 	reg[RV-1:0]r_imm, c_imm; assign imm = r_imm;
 `ifdef MULT
 	reg		r_mult, c_mult; assign mult = r_mult;
+	reg		r_div, c_div; assign div = r_div;
 `endif
 	reg		r_flush_all, c_flush_all; assign do_flush_all = r_flush_all;
 	reg		r_flush_write, c_flush_write; assign do_flush_write = r_flush_write;
@@ -91,6 +93,7 @@ module decode(input clk, input reset,
 		c_rs2_pc = 0;
 `ifdef MULT
 		c_mult = 0;
+		c_div = 0;
 `endif
 		case (ins[1:0])  // synthesis full_case parallel_case
 		2'b00:
@@ -393,8 +396,6 @@ module decode(input clk, input reset,
 								case ({ins[12],ins[6:5]}) // synthesis full_case parallel_case
 `ifdef MULT
 								3'b0_00:	c_mult = 1;
-`endif
-`ifdef DIV
 								3'b0_01:	c_div = 1;
 `endif
 								3'b0_10:	c_op = `OP_ADDB;
@@ -449,6 +450,7 @@ module decode(input clk, input reset,
 		r_io <= c_io;
 `ifdef MULT
 		r_mult <= c_mult;
+		r_div <= c_div;
 `endif
 		r_op <= c_op;
 		r_br <= c_br;
