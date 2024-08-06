@@ -19,6 +19,21 @@ void declare_label(int ind);
 void process_op(int ins);
 int ref_label(int ind, int type, int offset);
 
+int
+shift_exp(int r) {
+	if (!bit32) {
+		if (r >= 1 && r <= 16)
+			return ((r&0xc)<<1) | ((r&3)<<5);
+		fprintf(stderr, "%d: shift must be between 1 and 16 - %d\n", line, r);
+	} else {
+		if (r >= 1 && r <= 32)
+			return ((r&0xc)<<1) | ((r&7)<<5);
+		fprintf(stderr, "%d: shift must be between 1 and 32 - %d\n", line, r);
+	}
+	errs++;
+	return 0;
+}
+
 void
 chkr(int r) {
 	if (r&8)
@@ -259,6 +274,7 @@ struct tab reserved[] = {
 	"mulhi", t_mulhi,
 	"mmu", t_mmu,
 	"mul", t_mul,
+	"div", t_div,
 	"and", t_and,
 	"or", t_or,
 	"xor", t_xor,

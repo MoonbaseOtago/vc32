@@ -232,6 +232,78 @@ module execute(input clk, input reset,
 `endif
 							     );
 
+	reg [RV-1:0]sll_v, sra_v, srl_v;
+	generate
+		if (RV == 16) begin
+			always @(r2)
+			case (r2[3:0])
+			1: sll_v = {r1[14:0], 1'b0};
+			2: sll_v = {r1[13:0], 2'b0};
+			3: sll_v = {r1[12:0], 3'b0};
+			4: sll_v = {r1[11:0], 4'b0};
+			5: sll_v = {r1[10:0], 5'b0};
+			6: sll_v = {r1[9:0], 6'b0};
+			7: sll_v = {r1[8:0], 7'b0};
+			8: sll_v = {r1[7:0], 8'b0};
+			9: sll_v = {r1[5:0], 9'b0};
+			10:sll_v = {r1[5:0], 10'b0};
+			11:sll_v = {r1[4:0], 11'b0};
+			12:sll_v = {r1[3:0], 12'b0};
+			13:sll_v = {r1[2:0], 13'b0};
+			14:sll_v = {r1[1:0], 14'b0};
+			15:sll_v = {r1[0], 15'b0};
+			0: sll_v = 16'b0;
+			endcase
+
+			always @(r2)
+			case (r2[3:0])
+			1: srl_v = {1'b0, r1[15:1]};
+			2: srl_v = {2'b0, r1[15:2]};
+			3: srl_v = {3'b0, r1[15:3]};
+			4: srl_v = {4'b0, r1[15:4]};
+			5: srl_v = {5'b0, r1[15:5]};
+			6: srl_v = {6'b0, r1[15:6]};
+			7: srl_v = {7'b0, r1[15:7]};
+			8: srl_v = {8'b0, r1[15:8]};
+			9: srl_v = {9'b0, r1[15:9]};
+			10:srl_v = {10'b0, r1[15:10]};
+			11:srl_v = {11'b0, r1[15:11]};
+			12:srl_v = {12'b0, r1[15:12]};
+			13:srl_v = {13'b0, r1[15:13]};
+			14:srl_v = {14'b0, r1[15:14]};
+			15:srl_v = {15'b0, r1[15]};
+			0: srl_v =  16'b0;
+			endcase
+
+			always @(r2)
+			case (r2[3:0])
+			1: sra_v = {{1{r1[15]}}, r1[15:1]};
+			2: sra_v = {{2{r1[15]}}, r1[15:2]};
+			3: sra_v = {{3{r1[15]}}, r1[15:3]};
+			4: sra_v = {{4{r1[15]}}, r1[15:4]};
+			5: sra_v = {{5{r1[15]}}, r1[15:5]};
+			6: sra_v = {{6{r1[15]}}, r1[15:6]};
+			7: sra_v = {{7{r1[15]}}, r1[15:7]};
+			8: sra_v = {{8{r1[15]}}, r1[15:8]};
+			9: sra_v = {{9{r1[15]}}, r1[15:9]};
+			10:sra_v = {{10{r1[15]}}, r1[15:10]};
+			11:sra_v = {{11{r1[15]}}, r1[15:11]};
+			12:sra_v = {{12{r1[15]}}, r1[15:12]};
+			13:sra_v = {{13{r1[15]}}, r1[15:13]};
+			14:sra_v = {{14{r1[15]}}, r1[15:14]};
+			15:sra_v = {{15{r1[15]}}, r1[15]};
+			0: sra_v =  {16{r1[15]}};
+			endcase
+		end else begin
+			always @(r2)
+				sll_v = {RV{1'bx}};
+			always @(r2)
+				srl_v = {RV{1'bx}};
+			always @(r2)
+				sra_v = {RV{1'bx}};
+		end
+	endgenerate
+
 	wire [RV-1:0]added = r1 + r2;
 	reg [RV-1:0]r_wb, c_wb;
 	reg [3:0]r_wb_addr;
@@ -249,9 +321,9 @@ module execute(input clk, input reset,
 	`OP_XOR:	c_wb = r1 ^ r2;
 	`OP_OR:		c_wb = r1 | r2;
 	`OP_AND:	c_wb = r1 & r2;
-	`OP_SLL:	c_wb = {r1[RV-2:0], 1'b0};
-	`OP_SRA:	c_wb = {{1{r1[RV-1]}}, r1[RV-1:1]};
-	`OP_SRL:	c_wb = {1'b0, r1[RV-1:1]};
+	`OP_SLL:	c_wb = sll_v;
+	`OP_SRA:	c_wb = sra_v;
+	`OP_SRL:	c_wb = srl_v;
 	`OP_ADDB:	c_wb = {{(RV-8){added[7]}}, added[7:0]};
 	`OP_ADDBU:	c_wb = {{(RV-8){1'b0}}, added[7:0]};
 	`OP_SWAP:	c_wb = {r2[7:0], r2[15:8]};
@@ -271,8 +343,8 @@ module execute(input clk, input reset,
 	reg [RV:0]t2;
 
 	always @(*) begin
-		t1 = 'bx;
-		t2 = 'bx;
+		t1 = {RV{1'bx}};
+		t2 = {RV+1{1'bx}};
 		c_mult_off = (start_mult||start_div)?~0:r_mult_off-1;
 		if (r_wb_valid && r_wb_addr == 4'b0111) begin
 			c_mult = {r_wb, r_mult[RV-1:0]};

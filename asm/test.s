@@ -50,7 +50,7 @@ start:
 	li	a5, 0x20	// 0x20 - uart base
 	la	a0, begin
 	la	a1, end
-	srl	a1
+	srl	a1, 1
 // copy rom->ram
 	jal	copyrom
 	li	a0, 'A'
@@ -93,13 +93,13 @@ l:		add a1, -1
 	jal	send		// 99
 
 	lb	a0, (a2)	// ff99
-	srl	a0
+	srl	a0, 1
 	jal	send		// cc
 
 	lb	a3, (a2)	// ff99
 	sw	a3, 2(a2)	// ff99
 	lw	a0, 2(a2)	// ff99
-	srl	a0
+	srl	a0, 1
 	jal	send		// cc
 
 	li 	a0, 0x55
@@ -261,7 +261,7 @@ b12:				// should be 12
 
 
 	li 	s0, -3
-	sra	s0
+	sra	s0, 1
 	mv	a0, s0
 	jal     send            // fe
 	swap	a0, s0
@@ -269,14 +269,14 @@ b12:				// should be 12
 
 
 	li 	s0, -3
-	srl	s0
+	srl	s0, 1
 	mv	a0, s0
 	jal     send            // fe
 	swap	a0, s0
 	jal     send            // 7f
 
 	li 	s0, -3
-	sll	s0
+	sll	s0, 1
 	mv	a0, s0
 	jal     send            // fa
 	swap	a0, s0
@@ -360,7 +360,7 @@ lp1:
 
 	mv	a0, csr		// set user_io
 	li	a1, 1<<6
-	sll	a1
+	sll	a1, 1
 	or	a0, a1
 	mv	csr, a0
 
@@ -604,7 +604,7 @@ wrt2:	mv 	a1, mmu
 	mv	csr, a3
 	lw	a0, (a4)	// can still read
 	mv	csr, a2
-	jal     send            // 0x77
+	jal     send             // 0x77
 
 
 	li	a0, 0x11
@@ -616,13 +616,13 @@ ff1:	sw	a0, (a4)	// should fail
 wrt3:	mv	a1, mmu
 	mv	csr, a2
 	mov	a0, a1
-	jal	send		// 0x00
+	jal	send 		// 0x00
 	swap	a0, a1
-	jal	send		// 0x00
+	jal	send 		// 0x00
 
 	li	a0, 0x1000
 	lw	a0, (a0)
-	jal	send		// 0x77
+	jal	send 		// 0x77
 
 // add later - run some mapped code in user mode
 
@@ -631,7 +631,7 @@ wrt3:	mv	a1, mmu
 	sw	a1, (a0)
 	ebreak
 trapx:	li	a0, 0x67
-	jal	send		// 0x67
+	jal	send 		// 0x67
 
 	la	a1, faddr	// test addpc
 	li	a0, 9
@@ -639,17 +639,80 @@ faddr:	addpc	a0
 	add	a0, -9
 	sub	a1, a0
 	mv	a0, a1
-	jal	send	// 0
+	jal	send 	// 0
 	swap	a0, a1
 	jal	send	// 0
+
+//
+//	test divide
+//
+
+	li	a1, 20
+	li	a0, 3
+	div	a1, a0
+	jal	send 	// 3
+	mov	a0, a1	
+	jal	send 	// 6
+	swap	a0, a1
+	jal	send 	// 0
+	mv	a1, mulhi
+	mov	a0, a1	
+	jal	send 	// 2
+	swap	a0, a1
+	jal	send 	// 0
+
+	li	a1, 65534
+	li	a0, 3
+	div	a1, a0
+	mov	a0, a1	
+	jal	sendx 	// 0x54
+	swap	a0, a1
+	jal	sendx 	// 0x55
+	mv	a1, mulhi
+	mov	a0, a1	
+	jal	sendx 	// 2
+	swap	a0, a1
+	jal	sendx 	// 0
+	j	ffff
+
+fail:	li a0,-1
+	jal	sendx
+ll:	j	ll
 	
+ffff:
+
+	li	a0, 0
+	div	a1, a0
+	mov	a0, a1	
+	jal	sendx 	// 0
+	swap	a0, a1
+	jal	sendx 	// 0
+
+
+	li	a1, 65534
+	li	a0, 0x5555
+	div	a1, a0
+	mov	a0, a1	
+	jal	sendx 	// 0x02
+	swap	a0, a1
+	jal	sendx 	// 0x00
+	mv	a1, mulhi
+	mov	a0, a1	
+	jal	sendx 	// 54
+	swap	a0, a1
+	jal	sendx 	// 55
+
 
 	
 	jal fail
 
 
-// something to test addpc
 	ebreak
+sendx:	stio	a0, 2(a5)
+snx1:		ldio	a0, 4(a5)
+		and	a0, 1
+		beqz	a0, snx1
+	ret
 
 loc:	.word	0x99
 	.word	0x55
@@ -662,8 +725,5 @@ loc:	.word	0x99
 subr:	add	a0, 2
 	jr	lr
 
-fail:	li a0,-1
-	jal	send
-ll:	j	ll
 
 end:

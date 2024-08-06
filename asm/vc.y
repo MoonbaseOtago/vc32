@@ -1,4 +1,4 @@
-%token t_la t_lr t_value t_sp t_epc t_csr t_s0 t_s1 t_a0 t_a1 t_a2 t_a3 t_a4 t_a5 t_and t_or t_xor t_sub t_add t_mv t_nop t_inv t_ebreak t_jalr t_jr t_lw t_lb t_sw t_sb t_lea t_lui t_li t_beqz t_bnez t_bltz t_bgez t_j t_jal t_sll t_srl t_sra t_word t_byte t_name t_nl t_mul t_mulhi t_mmu t_addb t_addbu t_syscall t_stmp t_swapsp t_shl t_shr t_zext t_sext t_ldio t_stio t_flush t_dcache t_icache t_ret t_swap t_addpc
+%token t_la t_lr t_value t_sp t_epc t_csr t_s0 t_s1 t_a0 t_a1 t_a2 t_a3 t_a4 t_a5 t_and t_or t_xor t_sub t_add t_mv t_nop t_inv t_ebreak t_jalr t_jr t_lw t_lb t_sw t_sb t_lea t_lui t_li t_beqz t_bnez t_bltz t_bgez t_j t_jal t_sll t_srl t_sra t_word t_byte t_name t_nl t_mul t_mulhi t_mmu t_addb t_addbu t_syscall t_stmp t_swapsp t_shl t_shr t_zext t_sext t_ldio t_stio t_flush t_dcache t_icache t_ret t_swap t_addpc t_div
 %start  program
 %%
 
@@ -55,6 +55,7 @@ rm:		t_s0 			{ $$ = 0; }
 ins:		t_and  rm ',' rm 	{ $$ = 0x8c61|($2<<7)|($4<<2); }      
 	|	t_or  rm ',' rm         { $$ = 0x8c41|($2<<7)|($4<<2); } 
 	|	t_mul  rm ',' rm        { $$ = 0x8c03|($2<<7)|($4<<2); } 
+	|	t_div  rm ',' rm        { $$ = 0x8c23|($2<<7)|($4<<2); } 
 	|	t_addb  rm ',' rm       { $$ = 0x8c43|($2<<7)|($4<<2); } 
 	|	t_addbu  rm ',' rm      { $$ = 0x8c63|($2<<7)|($4<<2); } 
 	|	t_swap  rm ',' rm      	{ $$ = 0x9c03|($2<<7)|($4<<2); } 
@@ -118,9 +119,12 @@ ins:		t_and  rm ',' rm 	{ $$ = 0x8c61|($2<<7)|($4<<2); }
 	|	t_bgez	rm ',' t_name	{ $$ = 0xc003 | ($2<<7); ref_label($4, 3, 0); }
 	|	t_j	t_name		{ $$ = 0xa001; ref_label($2, 2, 0); }
 	|	t_jal	t_name		{ $$ = 0x2001; ref_label($2, 2, 0); }
-	|	t_sll	rm 		{ $$ = 0x0002 | ($2<<7); }
-	|	t_srl	rm 		{ $$ = 0x8001 | ($2<<7); }
-	|	t_sra	rm 		{ $$ = 0x8401 | ($2<<7); }
+	|	t_sll	rm ',' rm	{ $$ = 0x1002 | ($2<<7) | ($4<<2); }
+	|	t_sll	rm ',' exp	{ $$ = 0x0002 | ($2<<7) | shift_exp($4); }
+	|	t_srl	rm ',' rm	{ $$ = 0x9001 | ($2<<7) | ($4<<2); }
+	|	t_srl	rm ',' exp 	{ $$ = 0x8001 | ($2<<7) | shift_exp($4); }
+	|	t_sra	rm ',' rm	{ $$ = 0x9401 | ($2<<7) | ($4<<2); }
+	|	t_sra	rm ',' exp	{ $$ = 0x8401 | ($2<<7) | shift_exp($4); }
 	|	t_la	rm ',' t_name 	{ ref_label($4, 4, 0); code[pc++] = 0x6001|((8|$2)<<7); $$ = 0x0001 | ($2<<7); ref_label($4, 5, 0); }
 	|	t_la	rm ',' t_name '+' exp 	{ ref_label($4, 4, $6); code[pc++] = 0x6001|((8|$2)<<7); $$ = 0x0001 | ($2<<7); ref_label($4, 5, $6); }
 	|	'.' t_word exp		{ $$ = $3; }

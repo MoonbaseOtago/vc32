@@ -200,8 +200,8 @@ module decode(input clk, input reset,
 						c_rs2 = {1'b1, ins[4:2]};
 						c_imm = {{(RV-6){1'b0}}, ins[2], ins[12], ins[4:3], ins[6:5]};
 						case (ins[11:10]) // synthesis full_case parallel_case
-						2'b00: c_op = `OP_SRL;
-						2'b01: c_op = `OP_SRA;
+						2'b00: begin c_op = `OP_SRL; c_needs_rs2 = ins[12]; c_trap = !ins[12]?ins[2]:(ins[6:5]!=0); end
+						2'b01: begin c_op = `OP_SRA; c_needs_rs2 = ins[12]; c_trap = !ins[12]?ins[2]:(ins[6:5]!=0); end
 						2'b10: c_op = `OP_AND;
 						2'b11: begin
 								c_needs_rs2 = 1;
@@ -236,6 +236,9 @@ module decode(input clk, input reset,
 						c_op = `OP_SLL;
 						c_rd = {1'b1, ins[9:7]};
 						c_rs1 = {1'b1, ins[9:7]};
+						c_rs2 = {1'b1, ins[4:2]};
+						c_imm = {{(RV-6){1'b0}}, ins[2], ins[12], ins[4:3], ins[6:5]};
+						c_needs_rs2 = ins[12]; c_trap = !ins[12]?ins[2]:(ins[6:5]!=0);
 					end
 			3'b010:	begin	// lwsp  **
 						c_load = 1;
