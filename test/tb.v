@@ -76,6 +76,7 @@ module tb ();
 				   .io2(b[2]),
 				   .io3(b[3]));
 	wire tx=uo_out[6];
+	assign ui_in[0]=tx;
 	reg [7:0]c;
 	reg uart_done;
 	initial begin

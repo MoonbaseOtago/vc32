@@ -1,4 +1,4 @@
-	.=0	
+.=0	
 begin:
 	j	start
 	.=4	
@@ -396,6 +396,9 @@ syscall1:
 
 	mv	a0, csr
 	jal     send            // 84
+	mv	a0, epc
+	add	a0, 2
+	mv	epc, a0
 	jr	epc
 
 
@@ -413,7 +416,7 @@ r3:	li	a0, 0x1a
 	la	a0, syscall2
 	la	a1, syscall_vector
 	sw	a0, (a1)
-	syscall					// goes to syscall2
+ss2:	syscall					// goes to syscall2
 syscall2:		
 	li	a0, 0x1b	
 	jal	send		// 0x1b
@@ -424,7 +427,7 @@ syscall2:
 	and	a0, a2
 	jal	send		// 0x0
 	mv	s1, epc
-	la	a2, syscall2
+	la	a2, ss2
 	sub	s1, a2
 	mv	a0, s1
 	jal	send		// 0x0
@@ -781,8 +784,57 @@ ffff:
 	jal     sendx   // ff
 	swap	a0, a1
 	jal     sendx   // ff
+
+// check uart input
+
+	li	a0, 3
+	stio	a0, 4(a5)
+	li	a0, 0x23
+	jal	sendx		// 0x23		// will be looped back
+ll1:		ldio	a0, 4(a5)
+		and	a0, 2
+		beqz    a0, ll1
+	ldio    a1, (a5)
+	ldio    a0, 4(a5)
+	jal     sendx		// 0x1
+	mv	a0, a1
+	jal     sendx		// 0x23
+//
+//	test interrupts
+//
+	la	a0, int_vector
+	la	a1, int1
+	sw	a1, (a0)
+
+	li	a4, 0x40	// 0x40 - int controller base
+	li	a0, 0
+	li	a2, 1
+	stio	a2, 4(a4)	// enable uart in  - pending uart
+	mv	a2, csr 	
+	or 	a2, 1
+	li	a3, 3
+ww:	mv 	csr, a2		// 
+wf:	li	a3, 2		// int should happen here - this instruction should never colplete
+	j	fail
+int1:	bnez	a0, oo1
+	add	a0, 1
+	jr	epc		// check that interrupt happens again
+oo1:	mv	a1, csr
+	mv	a2, epc
+	jal	sendx		// 1
+	mv	a0, a3
+	jal     sendx		// 3
+	mov	a0, a1
+	jal	sendx		// 0x8e
+	la	a0, wf
+	sub 	a2, a0
+	mv	a0, a2
+	jal     sendx 		// 1
+	swap	a0, a2
+	jal     sendx 		// 0
+
 	
-	jal fail
+	j	fail
 
 
 	ebreak

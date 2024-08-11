@@ -5,8 +5,9 @@
 //	All Rights Reserved
 //
 //	registers
-//		1 	- lr  *+
-//		2	- sp  *+
+//	    0   - 0   &
+//		1 	- lr  *
+//		2	- sp  *
 //		3	- epc *+
 //		4	- csr *+
 //		5	- mmu *+

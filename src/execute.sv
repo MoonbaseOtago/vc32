@@ -135,7 +135,7 @@ module execute(input clk, input reset,
 	wire [RV-1:0]csr = {{(RV-8){1'b0}}, user_io, 2'b00, mmu_d_proxy, mmu_enable, sup_enabled, r_prev_ie, r_ie};
 
 	always @(*)
-	if (rs1 == r_wb_addr && r_wb_addr!=0) begin
+	if (r_wb_valid && rs1 == r_wb_addr && r_wb_addr!=0) begin
 		r1reg = r_wb;
 	end else
 	case (rs1) // synthesis full_case parallel_case
@@ -179,7 +179,7 @@ module execute(input clk, input reset,
 	endcase
 	
 	always @(*) 
-	if (rs2 == r_wb_addr && r_wb_addr !=0) begin
+	if (r_wb_valid && rs2 == r_wb_addr && r_wb_addr !=0) begin
 		r2reg = r_wb;
 	end else
 	case (rs2) // synthesis full_case parallel_case
@@ -387,7 +387,7 @@ module execute(input clk, input reset,
 	if (!reset && ((valid && !((br|jmp)&!link) && !r_read_stall && !mult_stall) || mdone)) begin
 		r_wb_valid <= !(load&!r_read_stall || store);
 		r_wb_addr <= (reset ?0 : sys_trap||(interrupt&r_ie) ? 3 : store? 0 : rd);
-		r_wb <= link||sys_trap||(interrupt&r_ie)?{pc_plus_1, supmode}: c_wb;
+		r_wb <= sys_trap||(interrupt&r_ie)?{r_pc, supmode}: link ? {pc_plus_1, supmode}: c_wb;
 		r_wdata <= (cond[0]? {(RV/8){r2reg[7:0]}}:r2reg);
 	end else
 	if (r_read_stall && rdone) begin

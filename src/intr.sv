@@ -14,7 +14,7 @@ module intr(input clk, input reset,
 
 
 	//
-	//	0 - interrupt
+	//	0 - uart
 	//  1 - clock
 	//  2 - timer
 	//	3 - swi
@@ -118,7 +118,7 @@ module intr(input clk, input reset,
 		if (reset) begin
 			r_enable <= 0;
 		end else
-		if (io_write && io_addr == 8) begin
+		if (io_write && io_addr == 2) begin
 			r_enable <= io_wdata[4:0];
 		end 
 	end
