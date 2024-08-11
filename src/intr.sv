@@ -107,10 +107,10 @@ module intr(input clk, input reset,
 			r_swi <= 0;
 		end else
 		if (io_write && io_addr == 4) begin
-			r_swi <= r_swi|io_wdata[4];
+			r_swi <= r_swi|io_wdata[3];
 		end else
 		if (io_write && io_addr == 5) begin
-			r_swi <= r_swi&~io_wdata[4];
+			r_swi <= r_swi&~io_wdata[3];
 		end 
 	end
 

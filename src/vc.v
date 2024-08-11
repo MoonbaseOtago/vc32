@@ -353,7 +353,7 @@ assign uio_oe[7:4]=0;
 	intr		intr(.clk(clk), .reset(reset),
 					.interrupt(interrupt),
 					.uart_intr(uart_intr),
-					.sd_intr(uart_intr),
+					.sd_intr(1'b0),
 					.io_addr(addr[4:1]),
 					.io_write(|wmask&&io_access&&!fault&&(addr[7:5]==2)),
 					.io_wdata(wdata[15:0]),

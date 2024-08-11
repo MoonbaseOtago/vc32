@@ -833,6 +833,24 @@ oo1:	mv	a1, csr
 	swap	a0, a2
 	jal     sendx 		// 0
 
+// swi
+
+	la	a0, int_vector
+	la	a1, int2
+	sw	a1, (a0)
+	li	a3, 9
+	li	a2, 1<<3
+	stio    a2, 4(a4)	// enable swi
+	li	a3, 8
+	mv	a0, csr
+	or	a0, 1
+	mv	csr, a0		// enable interrupts
+	li	a3, 7
+	stio    a2, 8(a4)	// set swi
+	j	fail
+
+int2:	mv	a0, a3
+	jal	sendx
 	
 	j	fail
 
