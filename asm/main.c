@@ -96,7 +96,7 @@ int roffIO(int v)
 	}
 	if (v < 0 || v >= (1<<4)) {
 		errs++;
-		fprintf(stderr, "%d: invalid offset (must be >=0 <64)\n", line);
+		fprintf(stderr, "%d: invalid offset (must be >=0 <16)\n", line);
 		return 0;
 	}
 	return ( (((v>>1)&1)<<6) | (((v>>2)&3)<<10));

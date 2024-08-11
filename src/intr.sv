@@ -77,12 +77,6 @@ module intr(input clk, input reset,
 	end
 
 	always @(posedge clk) begin
-		if (io_write && io_addr == 12) begin
-			r_timer_count[15:0] <= io_wdata;
-		end else
-		if (io_write && io_addr == 13) begin
-			r_timer_count[23:16] <= io_wdata[7:0];
-		end else
 		if (io_write && io_addr == 15) begin
 			r_timer_count <= {io_wdata[7:0], r_timer_reload[15:0]};
 		end else

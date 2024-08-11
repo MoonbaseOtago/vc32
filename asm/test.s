@@ -850,7 +850,50 @@ oo1:	mv	a1, csr
 	j	fail
 
 int2:	mv	a0, a3
-	jal	sendx
+	jal	sendx		// 7
+
+	ldio	a0, 0(a4)
+	jal	sendx		// 8
+	ldio	a0, 2(a4)
+	jal	sendx		// 9
+	ldio	a0, 4(a4)
+	jal	sendx		// 8
+	stio    a2, 10(a4)	
+	ldio	a0, 0(a4)
+	jal	sendx		// 0
+
+	li	a0, 0
+	stio    a0, 4(a4)
+
+	li	a2, 0x50	// 0x50 - int controller 2nd half
+	la	a0, int_vector
+	la	a1, int3
+	sw	a1, (a0)
+	li	a0, 256
+	stio    a0, 12(a2)	// timer reload lo
+	li	a0, 0
+	stio    a0, 14(a2)	// timer reload hi
+	li	a3, 10
+	ldio	a1, 8(a2)	// timer
+	li	a3, 9
+	li	a0, 0x1f
+	stio    a0, 10(a4)	// clear pending
+	mv	a0, csr
+	or	a0, 1
+	mv	csr, a0		// enable interrupts
+	li      a3, 8
+	li	a2, 1<<2
+	stio    a2, 4(a4)
+	li      a3, 7
+	li      a3, 6
+sss:	j	sss
+
+int3:	mv	a0, a3
+	jal     sendx 		// 6
+	ldio	a0, 0(a4)
+	jal     sendx           // 4
+	mv	a0, a1	
+	jal     sendx           // 228
 	
 	j	fail
 
