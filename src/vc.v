@@ -337,33 +337,83 @@ assign uio_oe[7:4]=0;
 			.rom_mode(rom_mode),
             .reg_addr(addr[4:1]),
             .reg_data(wdata[7:0]),
-            .reg_write(|wmask&&io_access&&!fault&&(addr[7:5]==0)));
+            .reg_write(|wmask&&io_access&&!fault&&(addr[8:5]==0)));
 
+	wire		uart_tx, uart_rx;
 	uart		uart(.clk(clk), .reset(reset), 
-					.rx(ui_in[0]),
-					.tx(uo_out[6]),
+					.rx(uart_rx),
+					.tx(uart_tx),
 					.interrupt(uart_intr),
 					.io_addr(addr[4:1]),
-					.io_write(|wmask&&io_access&&!fault&&(addr[7:5]==1)),
-					.io_read(rstrobe[0]&&io_access&&(addr[7:5]==1)),
+					.io_write(|wmask&&io_access&&!fault&&(addr[8:5]==1)),
+					.io_read(rstrobe[0]&&io_access&&(addr[8:5]==1)),
 					.io_wdata(wdata[7:0]),
 					.io_rdata(uart_rdata));
+
+	wire		spi_intr;
+	wire   [1:0]spi_miso, spi_mosi, spi_clk;
+    wire   [2:0]spi_cs;
+	wire   [7:0]spi_rdata;
+	spi			spi(.clk(clk), .reset(reset),
+             
+					.cs(spi_cs),
+					.spi_clk(spi_clk),
+					.miso(spi_miso),
+					.mosi(spi_mosi),
+
+					.reg_addr(addr[3:1]),
+					.reg_sel(addr[5:4]),
+					.reg_write(|wmask&&io_access&&!fault&&(addr[8:6]==3)),
+					.reg_data_out(wdata[7:0]),
+					.reg_data_in(spi_rdata));
+
+	wire		gpio_intr;
+	wire   [7:0]gpio_rdata;
+	gpio		gpio(.clk(clk), .reset(reset),
+					.ui_in(ui_in),
+					.uo_out(uo_out),
+					.uio_in(uio_in[7:4]),
+					.uio_out(uio_out[7:4]),
+					.uio_oe(uio_oe[7:4]),
+
+					.interrupt(gpio_intr),
+
+					.uart_rx(uart_rx),
+					.uart_tx(uart_tx),
+
+					.spi_cs(spi_cs),
+					.spi_clk(spi_clk),
+					.spi_miso(spi_miso),
+					.spi_mosi(spi_mosi),
+
+					.reg_addr(addr[5:1]),
+					.reg_write(|wmask&&io_access&&!fault&&(addr[8:6]==2)),
+					.reg_data_out(wdata[7:0]),
+					.reg_data_in(gpio_rdata));
+
+	
 
 	wire [15:0]intr_rdata;
 	intr		intr(.clk(clk), .reset(reset),
 					.interrupt(interrupt),
 					.uart_intr(uart_intr),
-					.sd_intr(1'b0),
+					.spi_intr(spi_intr),
+					.gpio_intr(gpio_intr),
 					.io_addr(addr[4:1]),
-					.io_write(|wmask&&io_access&&!fault&&(addr[7:5]==2)),
+					.io_write(|wmask&&io_access&&!fault&&(addr[8:5]==2)),
 					.io_wdata(wdata[15:0]),
 					.io_rdata(intr_rdata));
 
 	always @(*)
-	case (addr[7:5])
+	case (addr[8:5])
+	0:			io_rdata = 6'hx; // qspi
 	1:			io_rdata = {8'h0, uart_rdata};
 	2:			io_rdata = intr_rdata;
-	default:	io_rdata = 16'hx;
+	4:			io_rdata = {8'h0, gpio_rdata};
+	5:			io_rdata = {8'h0, gpio_rdata};
+	6:			io_rdata = {8'h0, spi_rdata};
+	7:			io_rdata = {8'h0, spi_rdata};
+	default:	io_rdata = 6'hx;
 	endcase
  
 

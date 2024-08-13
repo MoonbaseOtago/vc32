@@ -5,7 +5,8 @@ module intr(input clk, input reset,
 		output interrupt,
 
 		input uart_intr,
-		input sd_intr,
+		input gpio_intr,
+		input spi_intr,
 	
 		input io_write,
 		input [3:0]io_addr,
@@ -18,21 +19,22 @@ module intr(input clk, input reset,
 	//  1 - clock
 	//  2 - timer
 	//	3 - swi
-	//	4 - sd
+	//	4 - gpio
+	//	5 - spi
 	//
 
-	reg [4:0]r_enable;
+	reg [5:0]r_enable;
 	reg		 r_swi, r_timer, r_clock;
 
-	wire [4:0]status = {sd_intr, r_swi, r_timer, r_clock, uart_intr};
-	wire [4:0]pending = r_enable&status;
+	wire [5:0]status = {spi_intr, gpio_intr, r_swi, r_timer, r_clock, uart_intr};
+	wire [5:0]pending = r_enable&status;
 	assign interrupt = |pending;
 
 	always @(*) begin
 		case (io_addr) 
-		0:	io_rdata = {11'h0, pending};
-		1:	io_rdata = {11'h0, status};
-		2:	io_rdata = {11'h0, r_enable};
+		0:	io_rdata = {10'h0, pending};
+		1:	io_rdata = {10'h0, status};
+		2:	io_rdata = {10'h0, r_enable};
 
 		8:	io_rdata = r_clock_count[15:0];
 		9:	io_rdata = r_clock_count[31:16];
