@@ -315,10 +315,11 @@ module vc(input clk, input reset,
 		endcase
 	end
 
+	wire [2:2]qspi_cs;
 	qspi  #(.RV(RV), .LINE_LENGTH(LINE_LENGTH), .PA(PA))qspi(.clk(clk), .reset(reset),
 		    .uio_oe(uio_oe[3:0]),
             .uio_out(uio_out[3:0]),
-            .cs({uo_out[7], uo_out[1:0]}),
+            .cs({qspi_cs[2], uo_out[1:0]}),
 
             .req((ifetch&i_pull)|(((|rstrobe || |wmask)&(d_pull|d_push))&!io_access&!fault)),
             .i_d(ifetch),
@@ -371,7 +372,7 @@ module vc(input clk, input reset,
 	wire   [7:0]gpio_rdata;
 	gpio		gpio(.clk(clk), .reset(reset),
 					.ui_in(ui_in),
-					.uo_out(uo_out[6:3]),
+					.uo_out(uo_out[7:3]),
 					.uio_in(uio_in[7:4]),
 					.uio_out(uio_out[7:4]),
 					.uio_oe(uio_oe[7:4]),
@@ -385,6 +386,8 @@ module vc(input clk, input reset,
 					.spi_clk(spi_clk),
 					.spi_miso(spi_miso),
 					.spi_mosi(spi_mosi),
+
+					.qspi_cs(qspi_cs[2]),
 
 					.reg_addr(addr[5:1]),
 					.reg_write(|wmask&&io_access&&!fault&&(addr[8:6]==2)),
