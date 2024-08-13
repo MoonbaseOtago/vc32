@@ -20,7 +20,6 @@ module spi(input clk, input reset,
 
 	reg [3:0]r_state;
 	reg [7:0]r_out;
-	assign	mosi = r_out[0];
 	reg [7:0]r_in;
 
 	reg  [1:0]r_sel;

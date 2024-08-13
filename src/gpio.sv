@@ -8,7 +8,7 @@ module gpio(input clk, input reset,
 		input  [7:4]uio_in,	
 		output [7:4]uio_out,	
 		output [7:4]uio_oe,	
-		output [7:0]uo_out,	
+		output [6:3]uo_out,	
 
 		output      interrupt,
 
@@ -34,11 +34,11 @@ module gpio(input clk, input reset,
 		assign spi_miso[0] = miso[r_spi_miso_src[0]];
 		assign spi_miso[1] = miso[r_spi_miso_src[1]];
 
-		reg	 [7:0]r_gpio_o;
+		reg	 [6:3]r_gpio_o;
 		reg	 [7:4]r_gpio_io;
 		reg	 [7:4]r_gpio_en;
 
-		reg	 [3:0]r_src_o[0:7];
+		reg	 [3:0]r_src_o[3:6];
 		reg	 [3:0]r_src_io[4:7];
 
 		//
@@ -71,15 +71,15 @@ module gpio(input clk, input reset,
 		3: reg_data_out = {uio_in[7:4], 4'b0};
 		4: reg_data_out = r_enable_in;
 		5: reg_data_out = {r_enable_io, 4'b0};
-		8:reg_data_out = r_gpio_o;
+		8:reg_data_out = {1'b0,r_gpio_o, 3'b0};
 		9:reg_data_out = {r_gpio_io, 4'b0};
 		10:reg_data_out = {r_gpio_en, 4'b0};
 		11:reg_data_out = {r_spi_miso_src[1], r_spi_miso_src[0]};
 		12:reg_data_out = {4'b0, 1'b0, r_uart_rx_src};
-		16:reg_data_out = {r_src_o[1],  r_src_o[0]};
-		17:reg_data_out = {r_src_o[3],  r_src_o[2]};
+		16:reg_data_out = 0;
+		17:reg_data_out = {r_src_o[3],  4'b0};
 		18:reg_data_out = {r_src_o[5],  r_src_o[4]};
-		19:reg_data_out = {r_src_o[7],  r_src_o[6]};
+		19:reg_data_out = {4'b0,  r_src_o[6]};
 		22:reg_data_out = {r_src_io[5], r_src_io[4]};
 		23:reg_data_out = {r_src_io[7], r_src_io[6]};
 		default: reg_data_out = 8'bx;
@@ -97,15 +97,14 @@ module gpio(input clk, input reset,
 		case (reg_addr) // synthesis full_case parallel_case
 		4: r_enable_in <= reg_data_in;
 		5: r_enable_io <= reg_data_in[7:4];
-		8: r_gpio_o <= reg_data_in;
+		8: r_gpio_o <= reg_data_in[6:3];
 		9: r_gpio_io <= reg_data_in[7:4];
 		10: r_gpio_en <= reg_data_in[7:4];
 		11: begin r_spi_miso_src[1] <= reg_data_in[7:4]; r_spi_miso_src[0] <= reg_data_in[3:0]; end
 		12: r_uart_rx_src <= reg_data_in[2:0]; 
-		16: begin r_src_o[1] <= reg_data_in[7:4]; r_src_o[0] <= reg_data_in[3:0]; end
-		17: begin r_src_o[3] <= reg_data_in[7:4]; r_src_o[2] <= reg_data_in[3:0]; end
+		17: begin r_src_o[3] <= reg_data_in[7:4]; end
 		18: begin r_src_o[5] <= reg_data_in[7:4]; r_src_o[4] <= reg_data_in[3:0]; end
-		19: begin r_src_o[7] <= reg_data_in[7:4]; r_src_o[6] <= reg_data_in[3:0]; end
+		19: begin r_src_o[6] <= reg_data_in[3:0]; end
 		22: begin r_src_io[5] <= reg_data_in[7:4]; r_src_io[4] <= reg_data_in[3:0]; end
 		23: begin r_src_io[7] <= reg_data_in[7:4]; r_src_io[6] <= reg_data_in[3:0]; end
 		endcase
@@ -115,12 +114,12 @@ module gpio(input clk, input reset,
 
 			genvar I;
 
-			for (I = 0; I < 8; I=I+1) begin
-				wire [7:0]srcs_o = {srcs, r_gpio_o[I]};
+			for (I = 3; I < 7; I=I+1) begin
+				wire [15:0]srcs_o = {srcs, r_gpio_o[I]};
 				assign uo_out[I] = srcs_o[r_src_o[I]];
 			end
 			for (I = 4; I < 8; I=I+1) begin
-				wire[7:0]srcs_io = {srcs, r_gpio_io[I]};
+				wire[15:0]srcs_io = {srcs, r_gpio_io[I]};
 				assign uio_out[I] = srcs_io[r_src_io[I]];
 			end
 		endgenerate
