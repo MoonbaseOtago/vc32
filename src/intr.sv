@@ -115,7 +115,7 @@ module intr(input clk, input reset,
 			r_enable <= 0;
 		end else
 		if (io_write && io_addr == 2) begin
-			r_enable <= io_wdata[4:0];
+			r_enable <= io_wdata[5:0];
 		end 
 	end
 

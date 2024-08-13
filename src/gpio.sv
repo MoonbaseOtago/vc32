@@ -37,6 +37,7 @@ module gpio(input clk, input reset,
 		reg	 [6:3]r_gpio_o;
 		reg	 [7:4]r_gpio_io;
 		reg	 [7:4]r_gpio_en;
+		assign uio_oe = r_gpio_en;
 
 		reg	 [3:0]r_src_o[3:6];
 		reg	 [3:0]r_src_io[4:7];

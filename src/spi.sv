@@ -26,6 +26,7 @@ module spi(input clk, input reset,
 	reg  [2:0]r_src;
 	reg  [2:0]r_bits;
 	reg	      r_interrupt, r_ready;
+	assign	interrupt = r_interrupt;
 	reg  [4:0]r_clk_count[0:2];
 	reg  [4:0]r_count;
 	reg  [1:0]r_mode[0:2];
@@ -105,7 +106,7 @@ module spi(input clk, input reset,
 			r_bits <= 7;
 			r_count <= reg_sel==3?r_clk_count[0]:r_clk_count[reg_sel];
 			r_state <= 1;
-			r_sel = reg_sel;
+			r_sel <= reg_sel;
 			r_ready <= 0;
 			r_interrupt <= 0;
 		end

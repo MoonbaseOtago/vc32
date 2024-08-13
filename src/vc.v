@@ -406,14 +406,14 @@ module vc(input clk, input reset,
 
 	always @(*)
 	case (addr[8:5])
-	0:			io_rdata = 6'hx; // qspi
+	0:			io_rdata = 16'hx; // qspi
 	1:			io_rdata = {8'h0, uart_rdata};
 	2:			io_rdata = intr_rdata;
 	4:			io_rdata = {8'h0, gpio_rdata};
 	5:			io_rdata = {8'h0, gpio_rdata};
 	6:			io_rdata = {8'h0, spi_rdata};
 	7:			io_rdata = {8'h0, spi_rdata};
-	default:	io_rdata = 6'hx;
+	default:	io_rdata = 16'hx;
 	endcase
  
 
