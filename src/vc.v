@@ -86,6 +86,9 @@ module vc(input clk, input reset,
 	parameter VA=RV;
 	parameter MMU=1;
 	parameter NMMU=16;
+	parameter LINE_LENGTH=4;  // cache line length (in bytes)
+	parameter I_NLINES=16;  // number of lines
+	parameter D_NLINES=8;  // number of lines
 
 	assign uo_out[2] = clk;
 
@@ -250,9 +253,6 @@ module vc(input clk, input reset,
 		.imm(imm));
 
 	
-	parameter LINE_LENGTH=4;  // cache line length (in bytes)
-	parameter I_NLINES=16;  // number of lines
-	parameter D_NLINES=8;  // number of lines
 
 	wire i_hit, i_pull;
 	wire d_hit, d_push, d_pull, d_wdone;

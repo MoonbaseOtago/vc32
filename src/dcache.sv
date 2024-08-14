@@ -51,7 +51,7 @@ module dcache(input clk, input reset,
 		assign dirty = r_dirty[pindex];
 		assign hit = valid && match;
 		assign push = valid && dirty && !fault && (flush_write ? 1 : !match);
-		assign pull = !hit && !push;
+		assign pull = !hit && !push && !flush_write;
 		assign tag = {pull?ptag:r_tag[pindex], pindex};
 
 		always @(*) begin 
