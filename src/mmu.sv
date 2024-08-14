@@ -11,7 +11,8 @@ module mmu(input clk,  input reset, input is_pc, input is_write, input is_read, 
 			output		   mmu_miss_fault,
 			output		   mmu_prot_fault,
 			input		   mmu_fault,
-			input		   reg_write, 
+			input	 [3:0]inv_mmu,		// si sd ui ud
+			input		   reg_write,		
 			output[RV-1:0]reg_read,
 			input [RV-1:0]reg_data);
 
@@ -82,6 +83,16 @@ wire [PA-1:UNTOUCHED]vtop_3_00 = r_vtop['h30];
 		r_fault_type <= mmu_miss_fault;
 		r_fault_ins <= is_pc;
 		r_fault_sup <= supmode&~(mmu_d_proxy&~is_pc);
+	end else
+	if (|inv_mmu) begin
+		if (inv_mmu[3]) // si
+			r_valid[{2'b11, {VA-UNTOUCHED{1'b1}}}:{2'b11, {VA-UNTOUCHED{1'b0}}}] <= 0;
+		if (inv_mmu[2]) // sd
+			r_valid[{2'b01, {VA-UNTOUCHED{1'b1}}}:{2'b01, {VA-UNTOUCHED{1'b0}}}] <= 0;
+		if (inv_mmu[1]) // ui
+			r_valid[{2'b10, {VA-UNTOUCHED{1'b1}}}:{2'b10, {VA-UNTOUCHED{1'b0}}}] <= 0;
+		if (inv_mmu[0]) // ud
+			r_valid[{2'b00, {VA-UNTOUCHED{1'b1}}}:{2'b00, {VA-UNTOUCHED{1'b0}}}] <= 0;
 	end else
 	if (reg_write) begin
 		if (reg_data[0]) begin

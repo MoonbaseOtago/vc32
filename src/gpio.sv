@@ -20,7 +20,7 @@ module gpio(input clk, input reset,
 		input  [1:0]spi_clk,
 		input  [2:0]spi_cs,
 
-		inout  [2:2]qspi_cs,
+		inout       qspi_cs,
 			
 		input	[4:0]reg_addr,
 		input   [7:0]reg_data_in,
@@ -41,7 +41,7 @@ module gpio(input clk, input reset,
 		reg	 [7:4]r_gpio_en;
 		assign uio_oe = r_gpio_en;
 
-		reg	 [3:0]r_src_o[3:6];
+		reg	 [3:0]r_src_o[3:7];
 		reg	 [3:0]r_src_io[4:7];
 
 		//
@@ -82,7 +82,7 @@ module gpio(input clk, input reset,
 		16:reg_data_out = 0;
 		17:reg_data_out = {r_src_o[3],  4'b0};
 		18:reg_data_out = {r_src_o[5],  r_src_o[4]};
-		19:reg_data_out = {4'b0,  r_src_o[6]};
+		19:reg_data_out = {r_src_o[7],  r_src_o[6]};
 		22:reg_data_out = {r_src_io[5], r_src_io[4]};
 		23:reg_data_out = {r_src_io[7], r_src_io[6]};
 		default: reg_data_out = 8'bx;
@@ -107,7 +107,7 @@ module gpio(input clk, input reset,
 		12: r_uart_rx_src <= reg_data_in[2:0]; 
 		17: begin r_src_o[3] <= reg_data_in[7:4]; end
 		18: begin r_src_o[5] <= reg_data_in[7:4]; r_src_o[4] <= reg_data_in[3:0]; end
-		19: begin r_src_o[6] <= reg_data_in[3:0]; end
+		19: begin r_src_o[7] <= reg_data_in[7:4]; r_src_o[6] <= reg_data_in[3:0]; end
 		22: begin r_src_io[5] <= reg_data_in[7:4]; r_src_io[4] <= reg_data_in[3:0]; end
 		23: begin r_src_io[7] <= reg_data_in[7:4]; r_src_io[6] <= reg_data_in[3:0]; end
 		endcase

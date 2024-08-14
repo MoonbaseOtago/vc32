@@ -34,6 +34,14 @@ shift_exp(int r) {
 	return 0;
 }
 
+int
+check_inv(int r) {
+	if (r>=1 &&r <= 15)
+		return r;
+	errs++;
+	fprintf(stderr, "%d: invalid mmu flush %d (must be 1-15)\n", line, r);
+	return 0;
+}
 void
 chkr(int r) {
 	if (r&8)
@@ -311,6 +319,7 @@ struct tab reserved[] = {
 	"flush", t_flush,
 	"icache", t_icache,
 	"dcache", t_dcache,
+	"invmmu", t_invmmu,
 	0, 0
 };
 

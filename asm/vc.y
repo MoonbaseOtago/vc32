@@ -1,4 +1,4 @@
-%token t_la t_lr t_value t_sp t_epc t_csr t_s0 t_s1 t_a0 t_a1 t_a2 t_a3 t_a4 t_a5 t_and t_or t_xor t_sub t_add t_mv t_nop t_inv t_ebreak t_jalr t_jr t_lw t_lb t_sw t_sb t_lea t_lui t_li t_beqz t_bnez t_bltz t_bgez t_j t_jal t_sll t_srl t_sra t_word t_byte t_name t_nl t_mul t_mulhi t_mmu t_addb t_addbu t_syscall t_stmp t_swapsp t_shl t_shr t_zext t_sext t_ldio t_stio t_flush t_dcache t_icache t_ret t_swap t_addpc t_div
+%token t_la t_lr t_value t_sp t_epc t_csr t_s0 t_s1 t_a0 t_a1 t_a2 t_a3 t_a4 t_a5 t_and t_or t_xor t_sub t_add t_mv t_nop t_inv t_ebreak t_jalr t_jr t_lw t_lb t_sw t_sb t_lea t_lui t_li t_beqz t_bnez t_bltz t_bgez t_j t_jal t_sll t_srl t_sra t_word t_byte t_name t_nl t_mul t_mulhi t_mmu t_addb t_addbu t_syscall t_stmp t_swapsp t_shl t_shr t_zext t_sext t_ldio t_stio t_flush t_dcache t_icache t_ret t_swap t_addpc t_div t_invmmu
 %start  program
 %%
 
@@ -138,6 +138,7 @@ ins:		t_and  rm ',' rm 	{ $$ = 0x8c61|($2<<7)|($4<<2); }
 	|	t_stio r ',' '(' rm ')'	{ $$ = 0x2003|($5<<7)|roffIO(0)|(($2&7)<<2); chkr($2); }
 	|	t_flush	'(' rm ')'	{ $$ = 0xa003|($3<<7); }
 	|	t_flush	cache		{ $$ = 0x0023|($2<<2); }
+	|	t_invmmu exp		{ $$ = 0x0103|check_inv($2); }
 	;
 
 cache:		t_icache		{ $$ = 2; }

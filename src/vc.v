@@ -107,6 +107,7 @@ module vc(input clk, input reset,
 	wire		ifetch;
 	wire		is_read = (|rstrobe) && ~io_access;
 	wire		is_write = (|wmask) && ~io_access;
+	wire   [3:0]inv_mmu;
 	generate
 		if (MMU == 0) begin
 			assign addrp = |wmask|| |rstrobe?addr[VA-1:RV/16]:pc[VA-1:RV/16];
@@ -115,6 +116,7 @@ module vc(input clk, input reset,
 			mmu   #(.VA(VA), .PA(PA), .RV(RV), .NMMU(NMMU))mmu(.clk(clk), .reset(reset), .supmode(supmode),
 						.mmu_enable(mmu_enable),
 						.mmu_d_proxy(mmu_d_proxy),
+						.inv_mmu(inv_mmu),
 						.is_pc(ifetch),
 						.is_read(is_read),
 						.is_write(is_write),
@@ -159,16 +161,17 @@ module vc(input clk, input reset,
 	wire		io_access; 
 	wire		io_rdone=|rstrobe & io_access;
 	wire		io_wdone=|wmask & io_access;
-	wire rdone, wdone;
+	wire		rdone, wdone;
 	wire [RV-1:0]rdata, wdata;
 	wire [7:0]uart_rdata;
 	reg [RV-1:0]io_rdata;
 
-	wire i_flush_all;
-	wire d_flush_all;
-	wire do_flush_all;
-	wire flush_write;
-	wire do_flush_write;
+	wire		i_flush_all;
+	wire		d_flush_all;
+	wire		do_flush_all;
+	wire		flush_write;
+	wire		do_flush_write;
+	wire		do_inv_mmu;
 	wire idone =ifetch&i_hit;
 	wire		user_io;
 
@@ -189,6 +192,7 @@ module vc(input clk, input reset,
 		.io(io),
 		.do_flush_all(do_flush_all),
 		.do_flush_write(do_flush_write),
+		.do_inv_mmu(do_inv_mmu),
 `ifdef MULT
 		.mult(mult),
 		.div(div),
@@ -229,6 +233,8 @@ module vc(input clk, input reset,
 		.do_flush_all(do_flush_all),
 		.d_flush_all(d_flush_all),
 		.i_flush_all(i_flush_all),
+		.do_inv_mmu(do_inv_mmu),
+		.inv_mmu(inv_mmu),
 `ifdef MULT
 		.mult(mult),
 		.div(div),
@@ -315,11 +321,11 @@ module vc(input clk, input reset,
 		endcase
 	end
 
-	wire [2:2]qspi_cs;
+	wire qspi_cs_2;
 	qspi  #(.RV(RV), .LINE_LENGTH(LINE_LENGTH), .PA(PA))qspi(.clk(clk), .reset(reset),
 		    .uio_oe(uio_oe[3:0]),
             .uio_out(uio_out[3:0]),
-            .cs({qspi_cs[2], uo_out[1:0]}),
+            .cs({qspi_cs_2, uo_out[1:0]}),
 
             .req((ifetch&i_pull)|(((|rstrobe || |wmask)&(d_pull|d_push))&!io_access&!fault)),
             .i_d(ifetch),
@@ -387,7 +393,7 @@ module vc(input clk, input reset,
 					.spi_miso(spi_miso),
 					.spi_mosi(spi_mosi),
 
-					.qspi_cs(qspi_cs[2]),
+					.qspi_cs(qspi_cs_2),
 
 					.reg_addr(addr[5:1]),
 					.reg_write(|wmask&&io_access&&!fault&&(addr[8:6]==2)),

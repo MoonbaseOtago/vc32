@@ -51,6 +51,8 @@ module execute(input clk, input reset,
 		input			rdone,
 		input	[RV-1:0]rdata,
 		output		    fault,
+		input			do_inv_mmu,
+		output	   [3:0]inv_mmu,
 		input			do_flush_all,
 		input			do_flush_write,
 		output			i_flush_all,
@@ -87,6 +89,7 @@ module execute(input clk, input reset,
 	assign d_flush_all = r_d_flush_all;
 	assign i_flush_all = r_i_flush_all;
 	assign flush_write = r_flush_write;
+	assign inv_mmu = (do_inv_mmu?imm[3:0]:0);
 
 
 	wire link = ((br&&cond[2])||jmp)&cond[0];

@@ -34,6 +34,7 @@ module decode(input clk, input reset,
 		output io, 
 		output do_flush_all, 
 		output do_flush_write, 
+		output do_inv_mmu, 
 `ifdef MULT
 		output mult,
 		output div,
@@ -71,6 +72,7 @@ module decode(input clk, input reset,
 `endif
 	reg		r_flush_all, c_flush_all; assign do_flush_all = r_flush_all;
 	reg		r_flush_write, c_flush_write; assign do_flush_write = r_flush_write;
+	reg		r_inv_mmu, c_inv_mmu; assign do_inv_mmu = r_inv_mmu;
 
 	always @(*) begin
 		c_flush_all = 0;
@@ -91,6 +93,7 @@ module decode(input clk, input reset,
 		c_sys_call = 0;
 		c_swapsp = 0; 
 		c_rs2_pc = 0;
+		c_inv_mmu = 0;
 `ifdef MULT
 		c_mult = 0;
 		c_div = 0;
@@ -357,6 +360,12 @@ module decode(input clk, input reset,
 									c_imm = {{(RV-2){1'bx}}, ins[3:2]};
 									c_trap = !supmode;
 							   end
+						11'b01????:begin			// invmmu  si sd ui ud
+									c_rd = 0;
+									c_inv_mmu = supmode;
+									c_imm = {{(RV-4){1'bx}}, ins[5:2]};
+									c_trap = !supmode;
+								end
 						default: c_trap = 1;
 						endcase
 				    end
@@ -461,6 +470,7 @@ module decode(input clk, input reset,
 		r_jmp <= c_jmp;
 		r_flush_all <= c_flush_all;
 		r_flush_write <= c_flush_write;
+		r_inv_mmu <= c_inv_mmu;
 	end
 
 
