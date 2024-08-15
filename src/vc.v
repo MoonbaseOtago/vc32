@@ -370,7 +370,7 @@ module vc(input clk, input reset,
 					.reg_addr(addr[3:1]),
 					.reg_sel(addr[5:4]),
 					.reg_write(|wmask&&io_access&&!fault&&(addr[8:6]==3)),
-					.reg_read(|rstrobe&&io_access&&!fault&&(addr[8:5]==1)),
+					.reg_read(|rstrobe&&io_access&&!fault&&(addr[8:6]==3)),
 					.reg_data_in(wdata[7:0]),
 					.reg_data_out(spi_rdata));
 

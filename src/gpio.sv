@@ -33,6 +33,7 @@ module gpio(input clk, input reset,
 
 		reg [3:0]r_spi_miso_src[0:1];
 		wire [15:0]miso = {uio_in, 4'bx, ui_in};
+wire [3:0]spi_miso_src=r_spi_miso_src[0];
 		assign spi_miso[0] = miso[r_spi_miso_src[0]];
 		assign spi_miso[1] = miso[r_spi_miso_src[1]];
 
@@ -53,13 +54,16 @@ module gpio(input clk, input reset,
 		//	9:8	 out
 		//	10	 oe[7:4]
 		//	11	 miso_src/uart_rx_src
-		//  16	 srco1/srco0			src0 = gpio
-		//  17	 srco3/srco2			src1 = uart_tx
-		//  18	 srco5/srco4			src2 = spi_mosi
-		//  19	 srco7/srco6			src3 = spi_clk
-		//  22	 srcio5/srco4			src4 = spics0
-		//  23	 srcio7/srco6			src5 = spics1
-		//								src6 = spics2
+		//  16	 -/-  			        src0 = gpio
+		//  17	 srco3/-				src1 = uart_tx
+		//  18	 srco5/srco4			src2 = spi_mosi[0]
+		//  19	 srco7/srco6			src3 = spi_mosi[1]
+		//  22	 srcio5/srco4			src4 = spi_clk[0]
+		//  23	 srcio7/srco6			src5 = spi_clk[1]
+		//								src6 = spi_cs[0]
+		//								src7 = spi_cs[1]
+		//								src8 = spi_cs[2]
+		//								src11 = qspi_cs[2]
 
 		reg [7:0]r_enable_in;
 		reg [7:4]r_enable_io;

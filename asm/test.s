@@ -894,9 +894,49 @@ int3:	mv	a0, a3
 	jal     sendx           // 4
 	mv	a0, a1	
 	jal     sendx           // 228
-	
-	j	fail
 
+
+// set up spi
+
+	//
+	//	clk = out 5
+	//	cs0 = out 4
+	//	miso = io 7
+	//	mosi = io 6
+	li	a3, 0xa0	// gpio base+0x20
+	li	a0, 0x46	// o 5/4 = clk/cs0
+	stio	a0, 4(a3)
+	li	a0, 0x02	// io 7/6 = -/mosi
+	stio	a0, 14(a3)
+	li	a3, 0x90	// gpio base+0x10
+	li	a0, 0x40	// enable io/6 as output
+	stio	a0, 4(a3)
+	li	a0, 0x0f	// set miso_0 in from io 7
+	stio	a0, 6(a3)
+
+	li	a3, 0xc0
+	li	a0, 0x00	// spi[0], mode 0, fastest clock
+	stio	a0, 8(a3)	
+
+
+	li	a0, 0x5a
+	stio	a0, 0(a3)
+k1:		ldio	a0, 4(a3)
+		beqz	a0, k1
+	ldio	a4, 2(a0)
+	li	a0, 0x85
+	stio	a0, 0(a3)
+k2:		ldio	a0, 4(a3)
+		beqz	a0, k2
+	ldio	a0, 0(a3)
+	jal	sendx		// 0x85
+	mv	a0, a4
+k3:	jal	sendx		// 0x5a
+k4:	
+
+// need a test for counter	
+	j	fail
+	
 
 	ebreak
 sendx:	stio	a0, 2(a5)

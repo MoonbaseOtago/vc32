@@ -40,7 +40,7 @@ module tb ();
     `endif
         .ui_in      (ui_in),    // Dedicated inputs
         .uo_out     (uo_out),   // Dedicated outputs
-        .uio_in     ({4'b0, b}),   // IOs: Input path
+        .uio_in     ({uio_in[7:4], b}),   // IOs: Input path
         .uio_out    (uio_out),  // IOs: Output path
         .uio_oe     (uio_oe),   // IOs: Enable path (active high: 0=input, 1=output)
         .ena        (ena),      // enable - goes high when design is selected
@@ -77,6 +77,7 @@ module tb ();
 				   .io3(b[3]));
 	wire tx=uo_out[6];
 	assign ui_in[0]=tx;
+	assign uio_in[7] = uio_oe[6]?uio_out[6]:1'bz;
 	reg [7:0]c;
 	reg uart_done;
 	initial begin
