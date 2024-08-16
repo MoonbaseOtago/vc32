@@ -895,6 +895,8 @@ int3:	mv	a0, a3
 	mv	a0, a1	
 	jal     sendx           // 228
 
+	li	a2, 0		// disable interrupts
+	stio    a2, 4(a4)
 
 // set up spi
 
@@ -987,8 +989,36 @@ l2:		ldio	a0, 4(a3)
 	jal	sendx		// 0x9a
 	
 
+// test mmu instruction fetch fault and recovery
+
+	la	a0, mmu_fault
+	la	a1, mmu_vector
+	sw	a0, (a1)
+	la	a0, syscall_fault
+	la	a1, syscall_vector
+	sw	a0, (a1)
+rrr:	invmmu	3		// invalidate any user mode MMU mappings
+	la	a0, user_code
+	mv	epc, a0
+	li	a0, 0x53
+	jal	sendx
+	li	a3, 0x44
+	jr	epc		// return into user code
+
+user_code:			// first return should fault, 2nd should succeed
+	add	a3, 0x9
+	syscall
+
+mmu_fault:	// from i fetch miss
+	add	a3, 0x8
+	li	a0, 0x3		// map to 0
+	mv	mmu, a0
+	jr	epc		// return should succeed
+syscall_fault: 	// from syscall
+	mv	a0, a3
+	jal	sendx		// 0x44+8+9 = 0x55 - make sure each instruction is executed once
+	
 // need a test for counter	
-// need to test mmu instruction fetch fauly and recovery
 	j	fail
 	
 

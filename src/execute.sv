@@ -387,10 +387,10 @@ module execute(input clk, input reset,
 `endif
 	
 	always @(posedge clk)
-	if (!reset && ((valid && !((br|jmp)&!link) && !r_read_stall && !mult_stall) || mdone)) begin
+	if (!reset && ((valid && !((br|jmp)&!link) && !r_read_stall && !mult_stall) || mdone || (mmu_fault&r_fetch))) begin
 		r_wb_valid <= !(load&!r_read_stall || store);
-		r_wb_addr <= (reset ?0 : sys_trap||(interrupt&r_ie) ? 3 : store? 0 : rd);
-		r_wb <= sys_trap||(interrupt&r_ie)?{r_pc, supmode}: link ? {pc_plus_1, supmode}: c_wb;
+		r_wb_addr <= (reset ?0 : (sys_trap||(interrupt&r_ie)||(mmu_fault&r_fetch)) ? 3 : store? 0 : rd);
+		r_wb <= sys_trap||(interrupt&r_ie)||(mmu_fault&r_fetch)?{r_pc, supmode}: link ? {pc_plus_1, supmode}: c_wb;
 		r_wdata <= (cond[0]? {(RV/8){r2reg[7:0]}}:r2reg);
 	end else
 	if (r_read_stall && rdone) begin
@@ -446,7 +446,7 @@ module execute(input clk, input reset,
 				if (reset) begin
 					c_supmode = 1;
 				end else 
-				if (valid && !r_read_stall && (sys_trap ||  interrupt&r_ie)) begin
+				if ((valid && !r_read_stall &&  (sys_trap ||  interrupt&r_ie)) || (mmu_trap&r_fetch) ) begin
 					c_supmode = 1;
 				end else
 				if (valid && jmp && rs1==3 && sup_enabled) begin
@@ -459,6 +459,9 @@ module execute(input clk, input reset,
 				c_prev_supmode = r_prev_supmode;
 				if (reset) begin
 					c_prev_supmode = 1;
+				end else
+				if ((valid && !r_read_stall &&  (sys_trap ||  interrupt&r_ie)) || (mmu_trap&r_fetch) ) begin
+					c_prev_supmode = r_supmode;
 				end else
 				if (r_wb_valid && r_wb_addr == 4'b0011 && c_supmode)
 					c_prev_supmode = r_wb[0];
@@ -494,7 +497,7 @@ module execute(input clk, input reset,
 			if (r_wb_valid && r_wb_addr == 4'b0100 && sup_enabled)
 				r_mmu_d_proxy <= r_wb[4];
 
-			assign mmu_trap = ((mmu_miss_fault)&r_read_stall) | ((mmu_miss_fault|mmu_prot_fault)&(|wmask));
+			assign mmu_trap = (mmu_miss_fault&r_fetch) | ((mmu_miss_fault)&r_read_stall) | ((mmu_miss_fault|mmu_prot_fault)&(|wmask));
 			assign mmu_fault = mmu_trap;
 		end else begin
 			assign prev_supmode = 1;
@@ -512,11 +515,11 @@ module execute(input clk, input reset,
 		if (reset) begin
 			c_prev_ie = 0;
 		end else
-		if (valid && !r_read_stall && (sys_trap ||  interrupt&r_ie)) begin
+		if ((valid && !r_read_stall && (sys_trap ||  interrupt&r_ie)) | (mmu_trap&r_fetch) ) begin
 			c_prev_ie = r_ie;
 		end else
 		if (r_wb_valid && r_wb_addr == 4'b0100 && sup_enabled)
-				c_prev_ie = r_wb[1];
+			c_prev_ie = r_wb[1];
 	end
 
 	always @(posedge clk)
@@ -543,7 +546,7 @@ module execute(input clk, input reset,
 
 	always @(posedge clk) begin
 		//r_trap <= !reset && valid && (trap || interrupt&&r_ie);
-		r_ie <= reset ? 0 : valid && (sys_trap || interrupt&&r_ie) ? 0: r_wb_valid && (r_wb_addr == 4) && sup_enabled ? r_wb[0] : valid&&jmp&&rs1==3&&sup_enabled?r_prev_ie : r_ie; 
+		r_ie <= reset ? 0 : (valid && (sys_trap || interrupt&&r_ie)) | (mmu_trap&r_fetch) ? 0: r_wb_valid && (r_wb_addr == 4) && sup_enabled ? r_wb[0] : valid&&jmp&&rs1==3&&sup_enabled?r_prev_ie : r_ie; 
 		r_pc <= c_pc;
 		r_branch_stall <= !reset&valid&(jmp|br&br_taken);
 	end
