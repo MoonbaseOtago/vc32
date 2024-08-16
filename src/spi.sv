@@ -91,7 +91,7 @@ module spi(input clk, input reset,
 	//		1: reads last data
 	//
 
-	wire sel = r_src[r_sel];
+	wire sel = r_src[r_sel==3?0:r_sel];
 
 	always @(posedge clk)
 	if (reset) begin

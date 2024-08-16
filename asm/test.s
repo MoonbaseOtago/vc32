@@ -923,7 +923,7 @@ int3:	mv	a0, a3
 	stio	a0, 0(a3)
 k1:		ldio	a0, 4(a3)
 		beqz	a0, k1
-	ldio	a4, 2(a0)
+	ldio	a4, 2(a3)
 	li	a0, 0x85
 	stio	a0, 0(a3)
 k2:		ldio	a0, 4(a3)
@@ -931,8 +931,21 @@ k2:		ldio	a0, 4(a3)
 	ldio	a0, 0(a3)
 	jal	sendx		// 0x85
 	mv	a0, a4
-k3:	jal	sendx		// 0x5a
-k4:	
+	jal	sendx		// 0x5a
+	
+	li	a3, 0xf0		// test sdcard reset - write to non existant CS
+	li	a1, 0xff		// must verify by eye
+	stio    a1, 0(a3)
+k3:		ldio    a0, 4(a3)
+		beqz    a0, k3
+	stio    a1, 0(a3)
+k4:		ldio    a0, 4(a3)
+		beqz    a0, k4
+	stio    a1, 0(a3)
+k5:		ldio    a0, 4(a3)
+		beqz    a0, k5
+	ldio    a0, 0(a3)
+	
 
 // need a test for counter	
 // need to test mmu instruction fetch fauly and recovery
