@@ -60,11 +60,11 @@ module mmu(input clk,  input reset, input is_pc, input is_write, input is_read, 
 	reg [2*NMMU-1:0]r_valid_i;
 	reg [2*NMMU-1:0]r_valid_d;
 	reg [2*NMMU-1:0]r_writeable_d;
-	wire [$clog2(NMMU)+1:0]sel_i = {supmode, pcv[VA-1:UNTOUCHED]};
-	wire [$clog2(NMMU)+1:0]sel_d = {supmode&~(mmu_d_proxy&~is_pc), addrv[VA-1:UNTOUCHED]};
+	wire [$clog2(NMMU):0]sel_i = {supmode, pcv[VA-1:UNTOUCHED]};
+	wire [$clog2(NMMU):0]sel_d = {supmode&~(mmu_d_proxy&~is_pc), addrv[VA-1:UNTOUCHED]};
 
-	assign mmu_miss_fault_i = mmu_enable && is_pc && !r_valid_i[sel_i];
-	assign mmu_miss_fault_d = mmu_enable && (is_read | is_write) && !r_valid_d[sel_d];
+	wire mmu_miss_fault_i = mmu_enable && is_pc && !r_valid_i[sel_i];
+	wire mmu_miss_fault_d = mmu_enable && (is_read | is_write) && !r_valid_d[sel_d];
 	assign mmu_miss_fault = mmu_miss_fault_i|mmu_miss_fault_d;
 	assign mmu_prot_fault = mmu_enable && is_write && !r_writeable_d[sel_d[VA-UNTOUCHED:0]];
 	reg [PA-1:UNTOUCHED]r_vtop_i[0:2*NMMU-1];
@@ -73,7 +73,7 @@ module mmu(input clk,  input reset, input is_pc, input is_write, input is_read, 
 	assign pcp = {(mmu_enable ? r_vtop_i[sel_i]:{{PA-RV{1'b0}}, pcv[VA-1:UNTOUCHED]}), pcv[UNTOUCHED-1:RV/16]};
 	assign addrp = {(mmu_enable ? r_vtop_d[sel_d]:{{PA-RV{1'b0}}, addrv[VA-1:UNTOUCHED]}), addrv[UNTOUCHED-1:RV/16]};
 
-	wire [$clog2(NMMU)+1:0]reg_addr = {r_fault_sup, r_fault_address[VA-1:UNTOUCHED]};;
+	wire [$clog2(NMMU):0]reg_addr = {r_fault_sup, r_fault_address[VA-1:UNTOUCHED]};;
 
 	always @(posedge clk)
 	if (reset) begin
@@ -91,13 +91,13 @@ module mmu(input clk,  input reset, input is_pc, input is_write, input is_read, 
 	end else
 	if (|inv_mmu) begin
 		if (inv_mmu[3]) // si
-			r_valid_i[{2'b1, {VA-UNTOUCHED{1'b1}}}:{2'b1, {VA-UNTOUCHED{1'b0}}}] <= 0;
+			r_valid_i[{1'b1, {VA-UNTOUCHED{1'b1}}}:{1'b1, {VA-UNTOUCHED{1'b0}}}] <= 0;
 		if (inv_mmu[2]) // sd
-			r_valid_d[{2'b0, {VA-UNTOUCHED{1'b1}}}:{2'b0, {VA-UNTOUCHED{1'b0}}}] <= 0;
+			r_valid_d[{1'b0, {VA-UNTOUCHED{1'b1}}}:{1'b0, {VA-UNTOUCHED{1'b0}}}] <= 0;
 		if (inv_mmu[1]) // ui
-			r_valid_i[{2'b1, {VA-UNTOUCHED{1'b1}}}:{2'b1, {VA-UNTOUCHED{1'b0}}}] <= 0;
+			r_valid_i[{1'b1, {VA-UNTOUCHED{1'b1}}}:{1'b1, {VA-UNTOUCHED{1'b0}}}] <= 0;
 		if (inv_mmu[0]) // ud
-			r_valid_d[{2'b0, {VA-UNTOUCHED{1'b1}}}:{2'b0, {VA-UNTOUCHED{1'b0}}}] <= 0;
+			r_valid_d[{1'b0, {VA-UNTOUCHED{1'b1}}}:{1'b0, {VA-UNTOUCHED{1'b0}}}] <= 0;
 	end else
 	if (reg_write) begin
 		if (reg_data[0]) begin
