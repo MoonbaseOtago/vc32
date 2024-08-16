@@ -203,7 +203,7 @@ module uart(input clk, input reset,
 		default: ;
 		endcase
 	end
-;
+
 	always @(posedge clk)
 	if (reset || r_div == 0) begin
 		r_div <= r_div_value;

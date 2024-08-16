@@ -73,7 +73,7 @@ module mmu(input clk,  input reset, input is_pc, input is_write, input is_read, 
 	assign pcp = {(mmu_enable ? r_vtop_i[sel_i]:{{PA-RV{1'b0}}, pcv[VA-1:UNTOUCHED]}), pcv[UNTOUCHED-1:RV/16]};
 	assign addrp = {(mmu_enable ? r_vtop_d[sel_d]:{{PA-RV{1'b0}}, addrv[VA-1:UNTOUCHED]}), addrv[UNTOUCHED-1:RV/16]};
 
-	wire [$clog2(NMMU):0]reg_addr = {r_fault_sup, r_fault_address[VA-1:UNTOUCHED]};;
+	wire [$clog2(NMMU):0]reg_addr = {r_fault_sup, r_fault_address[VA-1:UNTOUCHED]};
 
 	always @(posedge clk)
 	if (reset) begin
