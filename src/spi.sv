@@ -27,8 +27,8 @@ module spi(input clk, input reset,
 	reg  [2:0]r_bits;
 	reg	      r_interrupt, r_ready;
 	assign	interrupt = r_interrupt;
-	reg  [4:0]r_clk_count[0:2];
-	reg  [4:0]r_count;
+	reg  [6:0]r_clk_count[0:2];
+	reg  [6:0]r_count;
 	reg  [1:0]r_mode[0:2];
 	reg	 [1:0]r_clk;
 	reg	 [1:0]r_mosi;
@@ -43,9 +43,12 @@ module spi(input clk, input reset,
 		for (I = 0; I < 3; I = I+1) begin
 			always @(posedge clk)
 			if (reg_write && reg_sel == I && reg_addr == 4) begin
-				r_clk_count[I] <= reg_data_in[4:0];
-				r_mode[I] <= reg_data_in[6:5];
-				r_src[I] <= reg_data_in[7];
+				r_mode[I] <= reg_data_in[1:0];
+				r_src[I] <= reg_data_in[2];
+			end
+			always @(posedge clk)
+			if (reg_write && reg_sel == I && reg_addr == 5) begin
+				r_clk_count[I] <= reg_data_in[6:0];
 			end
 		end
 
@@ -57,14 +60,17 @@ module spi(input clk, input reset,
 		5'b??_00?: reg_data_out = r_in;
 		5'b??_010: reg_data_out = {7'b0, r_ready};
 		5'b??_011: reg_data_out = {7'b0, r_interrupt};
-		5'b00_100: reg_data_out = {r_src[0], r_mode[0], r_clk_count[0]};
-		5'b01_100: reg_data_out = {r_src[1], r_mode[1], r_clk_count[1]};
-		5'b10_100: reg_data_out = {r_src[2], r_mode[2], r_clk_count[2]};
+		5'b00_100: reg_data_out = {5'b0, r_src[0], r_mode[0]};
+		5'b01_100: reg_data_out = {5'b0, r_src[1], r_mode[1]};
+		5'b10_100: reg_data_out = {5'b0, r_src[2], r_mode[2]};
+		5'b00_101: reg_data_out = {3'b0, r_clk_count[0]};
+		5'b01_101: reg_data_out = {3'b0, r_clk_count[1]};
+		5'b10_101: reg_data_out = {3'b0, r_clk_count[2]};
 		default:   reg_data_out = 8'bx;
 		endcase
 	end
 
-	reg [4:0]clk_count;
+	reg [6:0]clk_count;
 	reg [1:0]mode;
 	always @(*) begin
 		case (r_sel) // synthesis full_case parallel_case

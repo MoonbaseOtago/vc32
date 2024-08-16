@@ -915,8 +915,9 @@ int3:	mv	a0, a3
 	stio	a0, 6(a3)
 
 	li	a3, 0xc0
-	li	a0, 0x00	// spi[0], mode 0, fastest clock
+	li	a0, 0x00	// spi[0], mode 0, io 0
 	stio	a0, 8(a3)	
+	stio	a0, 10(a3)	// spi[0], fastest clock
 
 
 	li	a0, 0x5a
