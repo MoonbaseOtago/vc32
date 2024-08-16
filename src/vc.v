@@ -95,8 +95,6 @@ module vc(input clk, input reset,
 	wire [ 1:0]rstrobe;
 	wire [(RV/8)-1:0]wmask;
 
-	wire [PA-1:RV/16]addrp;
-	wire [PA-1:RV/16]pcp;
 	wire		mmu_reg_write;
 	wire[RV-1:0]mmu_reg_data;
 	wire[RV-1:0]mmu_read;
