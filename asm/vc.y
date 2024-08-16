@@ -138,7 +138,7 @@ ins:		t_and  rm ',' rm 	{ $$ = 0x8c61|($2<<7)|($4<<2); }
 	|	t_stio r ',' '(' rm ')'	{ $$ = 0x2003|($5<<7)|roffIO(0)|(($2&7)<<2); chkr($2); }
 	|	t_flush	'(' rm ')'	{ $$ = 0xa003|($3<<7); }
 	|	t_flush	cache		{ $$ = 0x0023|($2<<2); }
-	|	t_invmmu exp		{ $$ = 0x0103|check_inv($2); }
+	|	t_invmmu exp		{ $$ = 0x0043|check_inv($2); }
 	;
 
 cache:		t_icache		{ $$ = 2; }

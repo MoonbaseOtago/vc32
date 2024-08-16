@@ -93,9 +93,9 @@ module mmu(input clk,  input reset, input is_pc, input is_write, input is_read, 
 		if (inv_mmu[3]) // si
 			r_valid_i[{1'b1, {VA-UNTOUCHED{1'b1}}}:{1'b1, {VA-UNTOUCHED{1'b0}}}] <= 0;
 		if (inv_mmu[2]) // sd
-			r_valid_d[{1'b0, {VA-UNTOUCHED{1'b1}}}:{1'b0, {VA-UNTOUCHED{1'b0}}}] <= 0;
+			r_valid_d[{1'b1, {VA-UNTOUCHED{1'b1}}}:{1'b1, {VA-UNTOUCHED{1'b0}}}] <= 0;
 		if (inv_mmu[1]) // ui
-			r_valid_i[{1'b1, {VA-UNTOUCHED{1'b1}}}:{1'b1, {VA-UNTOUCHED{1'b0}}}] <= 0;
+			r_valid_i[{1'b0, {VA-UNTOUCHED{1'b1}}}:{1'b0, {VA-UNTOUCHED{1'b0}}}] <= 0;
 		if (inv_mmu[0]) // ud
 			r_valid_d[{1'b0, {VA-UNTOUCHED{1'b1}}}:{1'b0, {VA-UNTOUCHED{1'b0}}}] <= 0;
 	end else

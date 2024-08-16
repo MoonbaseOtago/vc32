@@ -37,7 +37,7 @@ shift_exp(int r) {
 int
 check_inv(int r) {
 	if (r>=1 &&r <= 15)
-		return r;
+		return r<<2;
 	errs++;
 	fprintf(stderr, "%d: invalid mmu flush %d (must be 1-15)\n", line, r);
 	return 0;
