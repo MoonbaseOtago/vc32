@@ -947,6 +947,45 @@ k5:		ldio    a0, 4(a3)
 		beqz    a0, k5
 	ldio    a0, 0(a3)
 	
+	//	test spi #2 on chan 1
+	//	clk = out 4
+	//	cs2 = out 3
+	//	miso = in 2
+	//	mosi = io 5
+	li	a3, 0xa0	// gpio base+0x20
+	li	a0, 0x51	// o 7/6 = clk[1]/uart
+	stio	a0, 6(a3)
+	li	a0, 0x80	// o 3/- = cs2/
+	stio	a0, 2(a3)
+	li	a0, 0x30	// io 5/4 = mosi[1]/1
+	stio	a0, 12(a3)
+	li	a3, 0x90	// gpio base+0x10
+	li	a0, 0x60	// enable io/5 as output
+	stio	a0, 4(a3)
+	li	a0, 0x2f	// set miso_1 in from in 2
+	stio	a0, 6(a3)
+
+	li	a3, 0xe0
+	li	a0, 0x06	// spi[2], mode 3, io 1
+	stio	a0, 8(a3)	
+	li	a0, 0x3	
+	stio	a0, 10(a3)	// spi[2], almost fastest clock
+
+
+	li	a0, 0x9a
+	stio	a0, 0(a3)
+l1:		ldio	a0, 4(a3)
+		beqz	a0, l1
+	ldio	a4, 2(a3)
+	li	a0, 0x23
+	stio	a0, 0(a3)
+l2:		ldio	a0, 4(a3)
+		beqz	a0, l2
+	ldio	a0, 0(a3)
+	jal	sendx		// 0x23
+	mv	a0, a4
+	jal	sendx		// 0x9a
+	
 
 // need a test for counter	
 // need to test mmu instruction fetch fauly and recovery

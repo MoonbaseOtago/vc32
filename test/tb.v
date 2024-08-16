@@ -69,15 +69,16 @@ module tb ();
 				   .io2(b[2]),
 				   .io3(b[3]));
 
-	spiflash #(.FILENAME(""))ram2(.csb(uo_out[7]),
-			           .clk(uo_out[2]),
-				   .io0(b[0]),
-				   .io1(b[1]),
-				   .io2(b[2]),
-				   .io3(b[3]));
+//	spiflash #(.FILENAME(""))ram2(.csb(uo_out[7]),
+//			           .clk(uo_out[2]),
+//				   .io0(b[0]),
+//				   .io1(b[1]),
+//				   .io2(b[2]),
+//				   .io3(b[3]));
 	wire tx=uo_out[6];
 	assign ui_in[0]=tx;
 	assign uio_in[7] = uio_oe[6]?uio_out[6]:1'bz;
+	assign ui_in[2] = uio_oe[5]?uio_out[5]:1'bz;
 	reg [7:0]c;
 	reg uart_done;
 	initial begin
