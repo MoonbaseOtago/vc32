@@ -96,6 +96,7 @@ module vc(input clk, input reset,
 	wire [(RV/8)-1:0]wmask;
 
 	wire [PA-1:RV/16]addrp;
+	wire [PA-1:RV/16]pcp;
 	wire		mmu_reg_write;
 	wire[RV-1:0]mmu_reg_data;
 	wire[RV-1:0]mmu_read;
@@ -108,9 +109,12 @@ module vc(input clk, input reset,
 	wire		is_read = (|rstrobe) && ~io_access;
 	wire		is_write = (|wmask) && ~io_access;
 	wire   [3:0]inv_mmu;
+	wire [PA-1:1]phys_addr;
+	wire [PA-1:1]phys_pc;
 	generate
 		if (MMU == 0) begin
-			assign addrp = |wmask|| |rstrobe?addr[VA-1:RV/16]:pc[VA-1:RV/16];
+			assign phys_addr = addr[VA-1:RV/16];
+			assign phys_pc = pc[VA-1:RV/16];
 			assign mmu_read = 'bx;
 		end else begin
 			mmu   #(.VA(VA), .PA(PA), .RV(RV), .NMMU(NMMU))mmu(.clk(clk), .reset(reset), .supmode(supmode),
@@ -122,7 +126,8 @@ module vc(input clk, input reset,
 						.is_write(is_write),
 						.pcv(pc[VA-1:RV/16]),
 						.addrv(addr[VA-1:RV/16]),
-						.addrp(addrp),
+						.addrp(phys_addr),
+						.pcp(phys_pc),
 						.mmu_miss_fault(mmu_miss_fault),
 						.mmu_prot_fault(mmu_prot_fault),
 						.mmu_fault(mmu_fault),
@@ -265,14 +270,13 @@ module vc(input clk, input reset,
 	wire d_rstrobe_d, d_wstrobe_d, i_wstrobe_d;
 	wire [PA-1:$clog2(LINE_LENGTH)]d_tag, i_tag;
 	wire [3:0]dwrite;
-	wire [PA-1:1]phys_addr = addrp; // {addrp, |wmask|| |rstrobe? addr[$clog2(LINE_LENGTH)-1:RV/16]: pc[$clog2(LINE_LENGTH)-1:RV/16]};
 
 	assign rdone =  |rstrobe && ((io_access ? io_rdone : d_hit && !(d_pull|d_push)) || fault);
 	assign wdone =  |wmask &&   ((io_access ? io_wdone : ((d_hit && (!(d_pull|d_push)))|d_wdone) || (!d_push&&flush_write)) || fault);
 
 
 	icache #(.PA(PA), .LINE_LENGTH(LINE_LENGTH), .RV(RV), .NLINES(I_NLINES))icache(.clk(clk), .reset(reset),
-		.paddr(phys_addr[PA-1:1]),
+		.paddr(phys_pc[PA-1:1]),
 
 		.dread(uio_in[3:0]),	
 		.wstrobe_d(i_wstrobe_d),
@@ -314,9 +318,9 @@ module vc(input clk, input reset,
 	reg [1:0]mem;
 	always @(*) begin
 		case (rom_mode)
-		2'b00: mem = phys_addr[23]? 2:0;
+		2'b00: mem = (ifetch?phys_pc[23]:phys_addr[23])? 2:0;
 		2'b01: mem = 0;
-		2'b10: mem = phys_addr[23]? 1:0;
+		2'b10: mem = (ifetch?phys_pc[23]:phys_addr[23])? 1:0;
 		2'b11: mem = (ifetch || !d_push)? 1:0;
 		endcase
 	end

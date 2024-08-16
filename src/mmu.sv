@@ -8,6 +8,7 @@ module mmu(input clk,  input reset, input is_pc, input is_write, input is_read, 
 			input [VA-1:RV/16]pcv,
 			input [VA-1:RV/16]addrv, 
 			output [PA-1:RV/16]addrp,
+			output [PA-1:RV/16]pcp,
 			output		   mmu_miss_fault,
 			output		   mmu_prot_fault,
 			input		   mmu_fault,
@@ -27,8 +28,6 @@ module mmu(input clk,  input reset, input is_pc, input is_write, input is_read, 
 	reg				     r_fault_ins;
 	reg				     r_fault_sup;
 	assign reg_read =  {r_fault_address, {(RV-(VA-UNTOUCHED)-4){1'b0}}, r_fault_ins, r_fault_sup, r_fault_type, 1'b0};
-
-	wire  [VA-1:RV/16]taddr = (!is_write&&is_pc? pcv: addrv);
 
 //
 //	mmu reg
@@ -58,48 +57,58 @@ module mmu(input clk,  input reset, input is_pc, input is_write, input is_read, 
 //
 //	
 
-	reg [4*NMMU-1:0]r_valid;
-	reg [2*NMMU-1:0]r_writeable;
-	wire [$clog2(NMMU)+1:0]sel = {is_pc, supmode&~(mmu_d_proxy&~is_pc), taddr[VA-1:UNTOUCHED]};
+	reg [2*NMMU-1:0]r_valid_i;
+	reg [2*NMMU-1:0]r_valid_d;
+	reg [2*NMMU-1:0]r_writeable_d;
+	wire [$clog2(NMMU)+1:0]sel_i = {supmode, pcv[VA-1:UNTOUCHED]};
+	wire [$clog2(NMMU)+1:0]sel_d = {supmode&~(mmu_d_proxy&~is_pc), addrv[VA-1:UNTOUCHED]};
 
-	assign mmu_miss_fault = mmu_enable && (is_pc | is_read | is_write) && !r_valid[sel];
-	assign mmu_prot_fault = mmu_enable && is_write && !is_pc && !r_writeable[sel[VA-UNTOUCHED:0]];
-	reg [PA-1:UNTOUCHED]r_vtop[0:4*NMMU-1];
+	assign mmu_miss_fault_i = mmu_enable && is_pc && !r_valid_i[sel_i];
+	assign mmu_miss_fault_d = mmu_enable && (is_read | is_write) && !r_valid_d[sel_d];
+	assign mmu_miss_fault = mmu_miss_fault_i|mmu_miss_fault_d;
+	assign mmu_prot_fault = mmu_enable && is_write && !r_writeable_d[sel_d[VA-UNTOUCHED:0]];
+	reg [PA-1:UNTOUCHED]r_vtop_i[0:2*NMMU-1];
+	reg [PA-1:UNTOUCHED]r_vtop_d[0:2*NMMU-1];
 
-	assign addrp = {(mmu_enable ? r_vtop[sel]:{{PA-RV{1'b0}}, taddr[VA-1:UNTOUCHED]}), taddr[UNTOUCHED-1:RV/16]};
+	assign pcp = {(mmu_enable ? r_vtop_i[sel_i]:{{PA-RV{1'b0}}, pcv[VA-1:UNTOUCHED]}), pcv[UNTOUCHED-1:RV/16]};
+	assign addrp = {(mmu_enable ? r_vtop_d[sel_d]:{{PA-RV{1'b0}}, addrv[VA-1:UNTOUCHED]}), addrv[UNTOUCHED-1:RV/16]};
 
-	wire [$clog2(NMMU)+1:0]reg_addr = {r_fault_ins, r_fault_sup, r_fault_address[VA-1:UNTOUCHED]};;
-wire [PA-1:UNTOUCHED]vtop = r_vtop[sel];
-wire [PA-1:UNTOUCHED]vtop_3_00 = r_vtop['h30];
+	wire [$clog2(NMMU)+1:0]reg_addr = {r_fault_sup, r_fault_address[VA-1:UNTOUCHED]};;
+
 	always @(posedge clk)
 	if (reset) begin
-		r_valid <= 0;
+		r_valid_i <= 0;
+		r_valid_d <= 0;
 		r_fault_type <= 0;
 		r_fault_ins <= 0;
 		r_fault_sup <= 0;
 	end else
 	if (mmu_fault) begin
-		r_fault_address <= taddr[VA-1:UNTOUCHED];
+		r_fault_address <= (mmu_miss_fault_i?pcv[VA-1:UNTOUCHED]:addrv[VA-1:UNTOUCHED]);
 		r_fault_type <= mmu_miss_fault;
 		r_fault_ins <= is_pc;
 		r_fault_sup <= supmode&~(mmu_d_proxy&~is_pc);
 	end else
 	if (|inv_mmu) begin
 		if (inv_mmu[3]) // si
-			r_valid[{2'b11, {VA-UNTOUCHED{1'b1}}}:{2'b11, {VA-UNTOUCHED{1'b0}}}] <= 0;
+			r_valid_i[{2'b1, {VA-UNTOUCHED{1'b1}}}:{2'b1, {VA-UNTOUCHED{1'b0}}}] <= 0;
 		if (inv_mmu[2]) // sd
-			r_valid[{2'b01, {VA-UNTOUCHED{1'b1}}}:{2'b01, {VA-UNTOUCHED{1'b0}}}] <= 0;
+			r_valid_d[{2'b0, {VA-UNTOUCHED{1'b1}}}:{2'b0, {VA-UNTOUCHED{1'b0}}}] <= 0;
 		if (inv_mmu[1]) // ui
-			r_valid[{2'b10, {VA-UNTOUCHED{1'b1}}}:{2'b10, {VA-UNTOUCHED{1'b0}}}] <= 0;
+			r_valid_i[{2'b1, {VA-UNTOUCHED{1'b1}}}:{2'b1, {VA-UNTOUCHED{1'b0}}}] <= 0;
 		if (inv_mmu[0]) // ud
-			r_valid[{2'b00, {VA-UNTOUCHED{1'b1}}}:{2'b00, {VA-UNTOUCHED{1'b0}}}] <= 0;
+			r_valid_d[{2'b0, {VA-UNTOUCHED{1'b1}}}:{2'b0, {VA-UNTOUCHED{1'b0}}}] <= 0;
 	end else
 	if (reg_write) begin
 		if (reg_data[0]) begin
-			r_vtop[reg_addr] <= reg_data[RV-1:RV-(PA-UNTOUCHED)];
-			r_valid[reg_addr] <= reg_data[1];
-			if (!r_fault_ins)
-				r_writeable[reg_addr[$clog2(NMMU):0]] <= reg_data[2];
+			if (r_fault_ins) begin
+				r_vtop_i[reg_addr] <= reg_data[RV-1:RV-(PA-UNTOUCHED)];
+				r_valid_i[reg_addr] <= reg_data[1];
+			end else begin
+				r_vtop_d[reg_addr] <= reg_data[RV-1:RV-(PA-UNTOUCHED)];
+				r_valid_d[reg_addr] <= reg_data[1];
+				r_writeable_d[reg_addr] <= reg_data[2];
+			end
 		end else begin
 			r_fault_address <= reg_data[VA-1:UNTOUCHED];
 			r_fault_type <= reg_data[1];

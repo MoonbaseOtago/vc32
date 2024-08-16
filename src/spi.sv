@@ -105,7 +105,7 @@ module spi(input clk, input reset,
 			r_out <= reg_data_in;
 			r_bits <= 7;
 			r_count <= reg_sel==3?r_clk_count[0]:r_clk_count[reg_sel];
-			r_clk[r_src[reg_sel]] <= r_mode[r_src[reg_sel]][1];
+			r_clk[r_src[reg_sel]] <= r_mode[reg_sel][1];
 			r_state <= 1;
 			r_sel <= reg_sel;
 			r_ready <= 0;

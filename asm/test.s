@@ -935,6 +935,7 @@ k3:	jal	sendx		// 0x5a
 k4:	
 
 // need a test for counter	
+// need to test mmu instruction fetch fauly and recovery
 	j	fail
 	
 
