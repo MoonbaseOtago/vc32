@@ -125,6 +125,7 @@ module intr(input clk, input reset,
 		end else
 		if (io_write && io_addr == 9) begin
 			r_clock_count[31:16] <= io_wdata;
+			r_clock_count[15:0] <= 0;
 		end else begin
 			r_clock_count <= r_clock_count+1;
 		end

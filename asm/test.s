@@ -1018,7 +1018,35 @@ syscall_fault: 	// from syscall
 	mv	a0, a3
 	jal	sendx		// 0x44+8+9 = 0x55 - make sure each instruction is executed once
 	
-// need a test for counter	
+// test the 32-bit counter	
+	
+	li	a2, 0x50	// 0x50 - int controller 2nd half
+	la	a0, int_vector
+	la	a1, int4
+	sw	a1, (a0)
+	li	a1, 512
+	li	a0, 0
+	stio 	a0, 6(a2)
+	stio	a1, 4(a2)	// cmp
+	stio 	a0, 2(a2)
+	stio 	a0, 0(a2)
+	stio 	a0, 2(a2)
+	li	a3, 0x40	// 0x50 - int controller 2nd half
+	li	a0, 0xff
+	stio	a0, 10(a3)
+	li	a0, 1<<1
+	stio	a0, 4(a3)
+	mv	a2, csr		// enable ints
+	or	a2, 1
+	mv	csr, a2
+as1:	j	as1
+
+int4:	li	a0, 0
+	stio	a0, 4(a3)
+	li	a0, 0x76
+	jal	sendx
+
+
 	j	fail
 	
 
