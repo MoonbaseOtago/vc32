@@ -63,9 +63,9 @@ module spi(input clk, input reset,
 		5'b00_100: reg_data_out = {5'b0, r_src[0], r_mode[0]};
 		5'b01_100: reg_data_out = {5'b0, r_src[1], r_mode[1]};
 		5'b10_100: reg_data_out = {5'b0, r_src[2], r_mode[2]};
-		5'b00_101: reg_data_out = {3'b0, r_clk_count[0]};
-		5'b01_101: reg_data_out = {3'b0, r_clk_count[1]};
-		5'b10_101: reg_data_out = {3'b0, r_clk_count[2]};
+		5'b00_101: reg_data_out = {1'b0, r_clk_count[0]};
+		5'b01_101: reg_data_out = {1'b0, r_clk_count[1]};
+		5'b10_101: reg_data_out = {1'b0, r_clk_count[2]};
 		default:   reg_data_out = 8'bx;
 		endcase
 	end

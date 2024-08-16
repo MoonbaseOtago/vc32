@@ -33,7 +33,6 @@ module gpio(input clk, input reset,
 
 		reg [3:0]r_spi_miso_src[0:1];
 		wire [15:0]miso = {uio_in, 4'bx, ui_in};
-wire [3:0]spi_miso_src=r_spi_miso_src[0];
 		assign spi_miso[0] = miso[r_spi_miso_src[0]];
 		assign spi_miso[1] = miso[r_spi_miso_src[1]];
 
